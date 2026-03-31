@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Padres Soundboard</title>
+  <style>
+    :root {
+      --bg: #2F241D; --bg-deep: #1E1610; --bg-card: #3A2C22; --bg-input: #1E1610;
+      --border: #473729; --border-light: #5C4A3A;
+      --text: #F5E6CC; --text-muted: #8B7355; --text-dim: #6B5744; --text-sub: #A89279;
+      --accent: #FFC425; --accent-hover: #E5B020; --accent-on: #2F241D;
+      --logo-fill: #FFC425;
+    }
+    body.light {
+      --bg: #F5E6CC; --bg-deep: #E8D5B8; --bg-card: #fff; --bg-input: #fff;
+      --border: #D2AA6B; --border-light: #D2AA6B;
+      --text: #2F241D; --text-muted: #6B5744; --text-dim: #8B7355; --text-sub: #5C4A3A;
+      --accent: #C8960C; --accent-hover: #A67A00; --accent-on: #fff;
+      --logo-fill: #2F241D;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100vh; display: flex; flex-direction: column;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    /* --- Theme Toggle --- */
+    .theme-toggle {
+      position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+      background: none; border: 2px solid var(--border-light); border-radius: 20px;
+      color: var(--text); cursor: pointer; font-size: 1.1rem;
+      width: 38px; height: 38px; display: flex; align-items: center;
+      justify-content: center; transition: all 0.2s;
+    }
+    .theme-toggle:hover { border-color: var(--accent); }
+
+    /* --- Nav --- */
+    nav { display: flex; background: var(--bg-deep); border-bottom: 1px solid var(--border); }
+    nav button {
+      flex: 1; padding: 14px; background: none; border: none; color: var(--text-muted);
+      font-size: 1rem; font-weight: 600; cursor: pointer;
+      border-bottom: 3px solid transparent; transition: all 0.2s;
+    }
+    nav button.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* --- Pages --- */
+    .page { display: none; flex: 1; padding: 24px; overflow-y: auto; padding-bottom: 120px; }
+    .page.active { display: block; }
+
+    /* --- Section Headers --- */
+    .section-title {
+      font-size: 1.1rem; font-weight: 700; color: var(--accent);
+      margin: 24px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border);
+    }
+    .section-title:first-child { margin-top: 0; }
+
+    /* --- Upload Page --- */
+    .drop-zone {
+      border: 2px dashed var(--border-light); border-radius: 12px; padding: 40px;
+      text-align: center; color: var(--text-muted); margin-bottom: 16px;
+      transition: all 0.2s; cursor: pointer;
+    }
+    .drop-zone.dragover { border-color: var(--accent); color: var(--accent); background: rgba(255,196,37,0.05); }
+    .drop-zone p { font-size: 1.1rem; margin-bottom: 4px; }
+    .drop-zone small { color: var(--text-dim); }
+    .file-input { display: none; }
+
+    .upload-list { list-style: none; }
+    .upload-item {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--bg-card); border-radius: 8px; padding: 12px 16px; margin-bottom: 8px;
+    }
+    .upload-item .file-name {
+      color: var(--text-sub); font-size: 0.8rem; flex-shrink: 0;
+      max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .upload-item input[type="text"] {
+      flex: 1; background: var(--bg-input); border: 1px solid var(--border-light); border-radius: 6px;
+      padding: 8px 12px; color: var(--text); font-size: 0.95rem;
+    }
+    .upload-item input[type="text"]:focus { outline: none; border-color: var(--accent); }
+    .remove-btn {
+      background: none; border: none; color: var(--text-dim);
+      font-size: 1.3rem; cursor: pointer; padding: 0 4px;
+    }
+    .remove-btn:hover { color: var(--accent); }
+
+    /* --- Roster Page --- */
+    .add-player-row {
+      display: flex; gap: 12px; margin-bottom: 16px;
+    }
+    .add-player-row input {
+      flex: 1; background: var(--bg-input); border: 1px solid var(--border-light); border-radius: 6px;
+      padding: 10px 14px; color: var(--text); font-size: 1rem;
+    }
+    .add-player-row input:focus { outline: none; border-color: var(--accent); }
+    .add-player-row button {
+      background: var(--accent); border: none; border-radius: 8px; color: var(--accent-on);
+      padding: 10px 20px; font-weight: 700; cursor: pointer; font-size: 0.95rem;
+      white-space: nowrap;
+    }
+    .add-player-row button:hover { background: var(--accent-hover); }
+
+    .player-card {
+      background: var(--bg-card); border-radius: 10px; padding: 16px;
+      margin-bottom: 10px; display: flex; flex-direction: column; gap: 10px;
+      transition: opacity 0.15s, transform 0.15s;
+    }
+    .player-card.dragging { opacity: 0.3; }
+    .player-card.drag-over { border-top: 3px solid var(--accent); margin-top: -3px; }
+    .drag-handle {
+      cursor: grab; color: var(--text-dim); font-size: 1.2rem; padding: 0 4px;
+      user-select: none; flex-shrink: 0;
+    }
+    .drag-handle:active { cursor: grabbing; }
+    .drag-handle:hover { color: var(--text-muted); }
+    .player-photo {
+      width: 40px; height: 40px; border-radius: 50%; object-fit: cover;
+      border: 2px solid var(--accent); flex-shrink: 0;
+    }
+    .player-photo-placeholder {
+      width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+      background: var(--border-light); display: flex; align-items: center;
+      justify-content: center; color: var(--text-dim); font-size: 1rem;
+    }
+    .player-header {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .player-number {
+      background: var(--accent); color: var(--accent-on); font-weight: 700; font-size: 0.9rem;
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .player-name-display { font-weight: 600; font-size: 1.05rem; flex: 1; }
+    .player-audio-row {
+      display: flex; align-items: center; gap: 8px; padding-left: 44px;
+    }
+    .player-audio-row label {
+      font-size: 0.8rem; color: var(--text-muted); width: 80px; flex-shrink: 0;
+    }
+    .player-audio-row .file-label {
+      font-size: 0.8rem; color: var(--text-sub); flex: 1;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .player-audio-row .file-label.empty { color: var(--text-dim); font-style: italic; }
+    .small-btn {
+      background: var(--border-light); border: none; border-radius: 6px; color: var(--text);
+      padding: 6px 12px; font-size: 0.8rem; cursor: pointer; white-space: nowrap;
+    }
+    .small-btn:hover { background: var(--text-dim); }
+    .small-btn.danger { background: none; color: var(--text-dim); }
+    .small-btn.danger:hover { color: var(--accent); }
+
+    /* --- Play Page --- */
+    #board {
+      display: grid; grid-template-columns: repeat(auto-fill, 120px);
+      gap: 16px; justify-content: center;
+    }
+    .sound-btn {
+      width: 120px; height: 120px; background: var(--bg-card); border: 2px solid var(--border-light);
+      border-radius: 12px; color: var(--text); font-size: 0.85rem; font-weight: 600;
+      cursor: pointer; transition: all 0.15s; display: flex; align-items: center;
+      justify-content: center; text-align: center; padding: 10px;
+      word-break: break-word; line-height: 1.2;
+    }
+    .sound-btn:hover { background: var(--border-light); transform: scale(1.05); }
+    .sound-btn:active, .sound-btn.playing {
+      background: var(--accent); border-color: var(--accent); color: var(--accent-on); transform: scale(0.96);
+    }
+
+    .lineup-section { margin-top: 32px; }
+    .lineup-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 12px;
+    }
+    .lineup-card {
+      background: var(--bg-card); border: 2px solid var(--border-light); border-radius: 10px;
+      padding: 14px; display: flex; flex-direction: column; gap: 8px;
+      transition: all 0.15s;
+    }
+    .lineup-card .lc-name {
+      font-weight: 700; font-size: 1rem;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .lineup-card .lc-name .player-number { width: 28px; height: 28px; font-size: 0.8rem; }
+    .lineup-card .lc-photo { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); }
+    .lineup-card .lc-photo-placeholder {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--border-light); display: flex; align-items: center;
+      justify-content: center; color: var(--text-dim); font-size: 0.85rem;
+    }
+    .lineup-card .lc-buttons { display: flex; gap: 8px; }
+    .lineup-card .lc-btn {
+      flex: 1; padding: 8px; border: 1px solid var(--border-light); border-radius: 6px;
+      background: var(--bg-deep); color: var(--text); font-size: 0.8rem; font-weight: 600;
+      cursor: pointer; text-align: center; transition: all 0.15s;
+    }
+    .lineup-card .lc-btn:hover { background: var(--border-light); }
+    .lineup-card .lc-btn.full { background: var(--accent); border-color: var(--accent); color: var(--accent-on); }
+    .lineup-card .lc-btn.full:hover { background: var(--accent-hover); }
+    .lineup-card .lc-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .lineup-card.active { border-color: var(--accent); }
+
+    .empty-state {
+      text-align: center; color: var(--text-dim); margin-top: 60px; font-size: 1rem;
+    }
+    .empty-state a { color: var(--accent); cursor: pointer; text-decoration: underline; }
+
+    /* --- Now Playing Bar --- */
+    #now-playing {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--bg-deep); border-top: 1px solid var(--border);
+      padding: 12px 24px; display: flex; align-items: center;
+      gap: 16px; min-height: 72px;
+    }
+    #now-playing .track-info { flex: 1; min-width: 0; }
+    #now-playing .track-name {
+      font-weight: 600; font-size: 0.95rem;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    #now-playing .track-status { font-size: 0.8rem; color: var(--text-muted); }
+    #now-playing .controls { display: flex; align-items: center; gap: 8px; }
+    #now-playing .controls button {
+      background: none; border: 2px solid var(--border-light); border-radius: 50%;
+      width: 42px; height: 42px; color: var(--text); font-size: 1.1rem;
+      cursor: pointer; display: flex; align-items: center;
+      justify-content: center; transition: all 0.15s;
+    }
+    #now-playing .controls button:hover { border-color: var(--accent); color: var(--accent); }
+    #now-playing .controls .play-pause {
+      width: 50px; height: 50px; font-size: 1.3rem; border-color: var(--accent);
+    }
+    #now-playing .stop-btn { border-color: var(--text-dim) !important; }
+    #now-playing .stop-btn:hover { border-color: var(--accent) !important; }
+    #progress-bar {
+      position: absolute; top: 0; left: 0; height: 3px;
+      background: var(--accent); transition: width 0.1s linear; width: 0%;
+    }
+  </style>
+</head>
+<body>
+
+  <header style="background:var(--bg-deep);text-align:center;padding:12px 16px;display:flex;align-items:center;justify-content:center;gap:12px;position:relative;">
+    <svg viewBox="0 0 560 400" style="height:42px;" aria-label="SD Padres"><path d="M223.522 66.637c-25.46 0-43.636 18.594-43.52 42.922v48.029c0 16.459 13.837 32.726 33.256 32.726h77.64c5.352 0 6.792 4.884 6.792 6.758 0 .666-.064 42.248-.064 42.248.032 11.074-6.452 19.786-17.968 19.786h-11.31v-58.259h-27.079v.044h-.01l.014 58.215h-28.5c-4.838-.164-5.682-4.729-5.682-6.786 0-1.43-.029-19.678-.029-26.241 0-6.978 8.574-9.245 10.66-9.774.267-.067.448-.215.416-.526-.022-.249-.19-.362-.362-.362h-37.764c0 13.77-.005 40.415-.005 40.449-.085 14.308 11.716 30.323 28.907 30.323h32.37l-.004 29.21c-.079 2.423-.488 4.542-1.125 6.416-2.499 6.6-8.629 9.836-11.4 10.437-.707.153-.711.963-.133 1.081l.059.03h90.575l.793-.005c38.459 0 59.953-18.708 59.953-56.609v-100.111c0-38.256-21.581-56.407-59.637-56.407 0 0-90.813.025-91.609.025-.721 0-.774 1.136 0 1.242.716.099 12.504 1.068 12.504 11.881l.004 29.893c-8.478 0-27.012.032-27.837 0-4.568-.055-6.125-3.33-6.366-5.886.007-7.026.008-42.696.015-43.164.27-13.553 7.6-20.475 20.347-20.475l61.608-.029c3.563 0 6.648 1.741 6.648 6.097 0 4.382-4.637 5.645-5.449 6.034-.352.203-.427.748-.034.748h34.43l-.015-11.355c-.275-8.336-5.8-28.594-31.666-28.594l-69.42-.01h-.001zm44.825 78.789h54.42c18.31 0 30.145 13.156 30.145 30.17v105.526c0 17.593-13.834 27.004-31.304 27.004-16.021 0-43.848.021-53.26.03v-21.966h14.327c25.46 0 42.129-18.426 42.129-42.615 0 0-.005-46.985-.005-49.833 0-10.407-8.511-30.473-33.252-30.473h-23.2v-17.844z" fill="var(--logo-fill)"/></svg>
+    <button class="theme-toggle" id="theme-toggle" title="Toggle light/dark mode">&#9788;</button>
+  </header>
+
+  <nav>
+    <button class="active" data-page="upload-page">Upload</button>
+    <button data-page="roster-page">Roster</button>
+    <button data-page="play-page">Play</button>
+  </nav>
+
+  <!-- Upload Page -->
+  <div id="upload-page" class="page active">
+    <div class="section-title">Sound Effects</div>
+    <div class="drop-zone" id="sfx-drop">
+      <p>Drag & drop MP3 files here</p>
+      <small>or click to browse</small>
+    </div>
+    <input type="file" class="file-input" id="sfx-input" accept="audio/*" multiple>
+    <ul id="sfx-list" class="upload-list"></ul>
+  </div>
+
+  <!-- Roster Page -->
+  <div id="roster-page" class="page">
+    <div class="section-title">Add Player</div>
+    <div class="add-player-row">
+      <input type="text" id="player-name-input" placeholder="Player name">
+      <input type="text" id="player-number-input" placeholder="#" style="max-width:60px;text-align:center;">
+      <button id="add-player-btn">Add Player</button>
+    </div>
+    <div class="section-title">Roster</div>
+    <div id="roster-list"></div>
+    <div id="roster-empty" class="empty-state" style="margin-top:24px;">No players added yet.</div>
+  </div>
+
+  <!-- Play Page -->
+  <div id="play-page" class="page">
+    <div class="section-title">Soundboard</div>
+    <div id="board"></div>
+    <div id="sfx-empty" class="empty-state" style="margin-top:20px;">
+      No sounds yet. <a class="go-upload">Upload some MP3s</a> to get started.
+    </div>
+
+    <div class="lineup-section">
+      <div class="section-title">Lineup</div>
+      <div id="lineup-grid" class="lineup-grid"></div>
+      <div id="lineup-empty" class="empty-state" style="margin-top:20px;">
+        No players yet. <a class="go-roster">Add players on the Roster page</a>.
+      </div>
+    </div>
+  </div>
+
+  <!-- Now Playing -->
+  <div id="now-playing">
+    <div id="progress-bar"></div>
+    <div class="track-info">
+      <div class="track-name" id="track-name">Nothing playing</div>
+      <div class="track-status" id="track-status">Add sounds and tap to play</div>
+    </div>
+    <div class="controls">
+      <button class="stop-btn" id="stop-btn" title="Stop">&#9632;</button>
+      <button id="prev-btn" title="Previous">&#9198;</button>
+      <button id="play-pause-btn" class="play-pause" title="Play/Pause">&#9654;</button>
+      <button id="next-btn" title="Next">&#9197;</button>
+    </div>
+  </div>
+
+  <script>
+    // ---- IndexedDB Persistence ----
+    const DB_NAME = 'padres-soundboard';
+    const DB_VERSION = 1;
+    let db;
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = e => {
+          const d = e.target.result;
+          if (!d.objectStoreNames.contains('sounds')) d.createObjectStore('sounds', { keyPath: 'id' });
+          if (!d.objectStoreNames.contains('players')) d.createObjectStore('players', { keyPath: 'id' });
+          if (!d.objectStoreNames.contains('audioFiles')) d.createObjectStore('audioFiles');
+          if (!d.objectStoreNames.contains('meta')) d.createObjectStore('meta');
+        };
+        req.onsuccess = e => { db = e.target.result; resolve(db); };
+        req.onerror = e => reject(e.target.error);
+      });
+    }
+
+    function dbPut(store, value, key) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(store, 'readwrite');
+        const s = tx.objectStore(store);
+        const req = key !== undefined ? s.put(value, key) : s.put(value);
+        req.onsuccess = () => resolve();
+        req.onerror = e => reject(e.target.error);
+      });
+    }
+
+    function dbGet(store, key) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(store, 'readonly');
+        const req = tx.objectStore(store).get(key);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = e => reject(e.target.error);
+      });
+    }
+
+    function dbGetAll(store) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(store, 'readonly');
+        const req = tx.objectStore(store).getAll();
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = e => reject(e.target.error);
+      });
+    }
+
+    function dbDelete(store, key) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(store, 'readwrite');
+        const req = tx.objectStore(store).delete(key);
+        req.onsuccess = () => resolve();
+        req.onerror = e => reject(e.target.error);
+      });
+    }
+
+    // Save a File/Blob to audioFiles store, keyed by a string like "sfx-3" or "player-5-intro"
+    function saveAudioBlob(key, file) {
+      return dbPut('audioFiles', file, key);
+    }
+
+    function loadAudioBlob(key) {
+      return dbGet('audioFiles', key);
+    }
+
+    // Persist the full sounds list metadata (no blobs)
+    async function saveSounds() {
+      const data = sounds.map(s => ({ id: s.id, fileName: s.fileName, label: s.label }));
+      await dbPut('meta', data, 'sounds');
+    }
+
+    // Persist the full players list metadata (no blobs)
+    async function savePlayers() {
+      const data = players.map(p => ({
+        id: p.id, name: p.name, number: p.number, photoFile: p.photoFile,
+        introFile: p.introFile, songFile: p.songFile, comboFile: p.comboFile
+      }));
+      await dbPut('meta', data, 'players');
+      await dbPut('meta', idCounter, 'idCounter');
+    }
+
+    function blobToAudio(blob) {
+      const url = URL.createObjectURL(blob);
+      return { url, audio: new Audio(url) };
+    }
+
+    async function loadAllData() {
+      await openDB();
+
+      const savedIdCounter = await dbGet('meta', 'idCounter');
+      if (savedIdCounter != null) idCounter = savedIdCounter;
+
+      // Load sounds
+      const savedSounds = await dbGet('meta', 'sounds');
+      if (savedSounds) {
+        for (const s of savedSounds) {
+          const blob = await loadAudioBlob(`sfx-${s.id}`);
+          if (!blob) continue;
+          const { url, audio } = blobToAudio(blob);
+          const entry = { id: s.id, fileName: s.fileName, label: s.label, url, audio };
+          sounds.push(entry);
+          renderSfxItem(entry);
+          if (s.id >= idCounter) idCounter = s.id + 1;
+        }
+      }
+
+      // Load players
+      const savedPlayers = await dbGet('meta', 'players');
+      if (savedPlayers) {
+        for (const p of savedPlayers) {
+          const player = {
+            id: p.id, name: p.name, number: p.number,
+            photoFile: p.photoFile || null, photoUrl: null,
+            introFile: p.introFile, introUrl: null, introAudio: null,
+            songFile: p.songFile, songUrl: null, songAudio: null,
+            comboFile: p.comboFile, comboUrl: null, comboAudio: null
+          };
+          // Load photo
+          if (p.photoFile) {
+            const photoBlob = await loadAudioBlob(`player-${p.id}-photo`);
+            if (photoBlob) player.photoUrl = URL.createObjectURL(photoBlob);
+          }
+          // Load audio blobs
+          for (const type of ['intro', 'song', 'combo']) {
+            if (p[type + 'File']) {
+              const blob = await loadAudioBlob(`player-${p.id}-${type}`);
+              if (blob) {
+                const { url, audio } = blobToAudio(blob);
+                player[type + 'Url'] = url;
+                player[type + 'Audio'] = audio;
+              }
+            }
+          }
+          players.push(player);
+          if (p.id >= idCounter) idCounter = p.id + 1;
+        }
+        renderRoster();
+      }
+    }
+
+    // ---- State ----
+    const sounds = [];
+    const players = [];
+    let idCounter = 0;
+
+    // Current playback
+    let playQueue = [];
+    let queueIndex = -1;
+    let isPlaying = false;
+
+    // ---- DOM refs ----
+    const sfxDrop = document.getElementById('sfx-drop');
+    const sfxInput = document.getElementById('sfx-input');
+    const sfxList = document.getElementById('sfx-list');
+    const rosterList = document.getElementById('roster-list');
+    const rosterEmpty = document.getElementById('roster-empty');
+    const board = document.getElementById('board');
+    const sfxEmpty = document.getElementById('sfx-empty');
+    const lineupGrid = document.getElementById('lineup-grid');
+    const lineupEmpty = document.getElementById('lineup-empty');
+    const trackName = document.getElementById('track-name');
+    const trackStatus = document.getElementById('track-status');
+    const progressBar = document.getElementById('progress-bar');
+    const playPauseBtn = document.getElementById('play-pause-btn');
+
+    // ---- Nav ----
+    document.querySelectorAll('nav button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.page).classList.add('active');
+        if (btn.dataset.page === 'play-page') renderPlayPage();
+      });
+    });
+    document.querySelectorAll('.go-upload').forEach(a =>
+      a.addEventListener('click', () => document.querySelector('[data-page="upload-page"]').click())
+    );
+    document.querySelectorAll('.go-roster').forEach(a =>
+      a.addEventListener('click', () => document.querySelector('[data-page="roster-page"]').click())
+    );
+
+    // ---- SFX Upload ----
+    sfxDrop.addEventListener('click', () => sfxInput.click());
+    sfxDrop.addEventListener('dragover', e => { e.preventDefault(); sfxDrop.classList.add('dragover'); });
+    sfxDrop.addEventListener('dragleave', () => sfxDrop.classList.remove('dragover'));
+    sfxDrop.addEventListener('drop', e => {
+      e.preventDefault(); sfxDrop.classList.remove('dragover');
+      handleSfxFiles(e.dataTransfer.files);
+    });
+    sfxInput.addEventListener('change', () => { handleSfxFiles(sfxInput.files); sfxInput.value = ''; });
+
+    async function handleSfxFiles(files) {
+      for (const file of files) {
+        if (!file.type.startsWith('audio/')) continue;
+        const url = URL.createObjectURL(file);
+        const entry = {
+          id: idCounter++, fileName: file.name,
+          label: file.name.replace(/\.[^.]+$/, ''),
+          url, audio: new Audio(url)
+        };
+        sounds.push(entry);
+        renderSfxItem(entry);
+        await saveAudioBlob(`sfx-${entry.id}`, file);
+      }
+      await saveSounds();
+    }
+
+    function renderSfxItem(entry) {
+      const li = document.createElement('li');
+      li.className = 'upload-item';
+      li.innerHTML = `
+        <span class="file-name">${esc(entry.fileName)}</span>
+        <input type="text" value="${esc(entry.label)}" placeholder="Button label...">
+        <button class="remove-btn">&times;</button>
+      `;
+      li.querySelector('input').addEventListener('input', e => { entry.label = e.target.value; saveSounds(); });
+      li.querySelector('.remove-btn').addEventListener('click', async () => {
+        sounds.splice(sounds.indexOf(entry), 1);
+        entry.audio.pause(); URL.revokeObjectURL(entry.url); li.remove();
+        await dbDelete('audioFiles', `sfx-${entry.id}`);
+        await saveSounds();
+      });
+      sfxList.appendChild(li);
+    }
+
+    // ---- Roster ----
+    document.getElementById('add-player-btn').addEventListener('click', addPlayer);
+    document.getElementById('player-name-input').addEventListener('keydown', e => { if (e.key === 'Enter') addPlayer(); });
+
+    function addPlayer() {
+      const nameInput = document.getElementById('player-name-input');
+      const numInput = document.getElementById('player-number-input');
+      const name = nameInput.value.trim();
+      if (!name) return;
+      const player = {
+        id: idCounter++, name, number: numInput.value.trim() || '?',
+        photoFile: null, photoUrl: null,
+        introFile: null, introUrl: null, introAudio: null,
+        songFile: null, songUrl: null, songAudio: null,
+        comboFile: null, comboUrl: null, comboAudio: null
+      };
+      players.push(player);
+      nameInput.value = ''; numInput.value = '';
+      nameInput.focus();
+      renderRoster();
+      savePlayers();
+    }
+
+    function renderRoster() {
+      rosterList.innerHTML = '';
+      rosterEmpty.style.display = players.length === 0 ? 'block' : 'none';
+      players.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'player-card';
+        card.draggable = true;
+        card.dataset.index = players.indexOf(p);
+        card.innerHTML = `
+          <div class="player-header">
+            <span class="drag-handle">&#9776;</span>
+            ${p.photoUrl ? `<img class="player-photo" src="${p.photoUrl}" alt="${esc(p.name)}">` : '<div class="player-photo-placeholder">&#128247;</div>'}
+            <div class="player-number">${esc(p.number)}</div>
+            <div class="player-name-display">${esc(p.name)}</div>
+            <button class="small-btn danger remove-player">&times;</button>
+          </div>
+          <div class="player-audio-row">
+            <label>Photo:</label>
+            <span class="file-label ${p.photoFile ? '' : 'empty'}">${p.photoFile ? esc(p.photoFile) : 'No photo'}</span>
+            <input type="file" accept="image/*" class="file-input photo-file">
+            <button class="small-btn upload-photo">Upload</button>
+          </div>
+          <div class="player-audio-row">
+            <label>Intro:</label>
+            <span class="file-label ${p.introFile ? '' : 'empty'}">${p.introFile ? esc(p.introFile) : 'No file'}</span>
+            <input type="file" accept="audio/*" class="file-input intro-file">
+            <button class="small-btn upload-intro">Upload</button>
+          </div>
+          <div class="player-audio-row">
+            <label>Walk-up:</label>
+            <span class="file-label ${p.songFile ? '' : 'empty'}">${p.songFile ? esc(p.songFile) : 'No file'}</span>
+            <input type="file" accept="audio/*" class="file-input song-file">
+            <button class="small-btn upload-song">Upload</button>
+          </div>
+          <div class="player-audio-row">
+            <label>Combined:</label>
+            <span class="file-label ${p.comboFile ? '' : 'empty'}">${p.comboFile ? esc(p.comboFile) : 'No file'}</span>
+            <input type="file" accept="audio/*" class="file-input combo-file">
+            <button class="small-btn upload-combo">Upload</button>
+          </div>
+        `;
+
+        const photoInput = card.querySelector('.photo-file');
+        card.querySelector('.upload-photo').addEventListener('click', () => photoInput.click());
+        photoInput.addEventListener('change', async () => {
+          const file = photoInput.files[0];
+          if (!file) return;
+          if (p.photoUrl) URL.revokeObjectURL(p.photoUrl);
+          p.photoFile = file.name;
+          p.photoUrl = URL.createObjectURL(file);
+          renderRoster();
+          await saveAudioBlob(`player-${p.id}-photo`, file);
+          await savePlayers();
+        });
+
+        card.querySelector('.remove-player').addEventListener('click', async () => {
+          if (p.introAudio) { p.introAudio.pause(); URL.revokeObjectURL(p.introUrl); }
+          if (p.songAudio) { p.songAudio.pause(); URL.revokeObjectURL(p.songUrl); }
+          if (p.comboAudio) { p.comboAudio.pause(); URL.revokeObjectURL(p.comboUrl); }
+          if (p.photoUrl) URL.revokeObjectURL(p.photoUrl);
+          await dbDelete('audioFiles', `player-${p.id}-photo`);
+          for (const type of ['intro', 'song', 'combo']) await dbDelete('audioFiles', `player-${p.id}-${type}`);
+          players.splice(players.indexOf(p), 1);
+          renderRoster();
+          await savePlayers();
+        });
+
+        const introInput = card.querySelector('.intro-file');
+        card.querySelector('.upload-intro').addEventListener('click', () => introInput.click());
+        introInput.addEventListener('change', async () => {
+          const file = introInput.files[0];
+          if (!file) return;
+          if (p.introUrl) URL.revokeObjectURL(p.introUrl);
+          p.introFile = file.name;
+          p.introUrl = URL.createObjectURL(file);
+          p.introAudio = new Audio(p.introUrl);
+          renderRoster();
+          await saveAudioBlob(`player-${p.id}-intro`, file);
+          await savePlayers();
+        });
+
+        const songInput = card.querySelector('.song-file');
+        card.querySelector('.upload-song').addEventListener('click', () => songInput.click());
+        songInput.addEventListener('change', async () => {
+          const file = songInput.files[0];
+          if (!file) return;
+          if (p.songUrl) URL.revokeObjectURL(p.songUrl);
+          p.songFile = file.name;
+          p.songUrl = URL.createObjectURL(file);
+          p.songAudio = new Audio(p.songUrl);
+          renderRoster();
+          await saveAudioBlob(`player-${p.id}-song`, file);
+          await savePlayers();
+        });
+
+        const comboInput = card.querySelector('.combo-file');
+        card.querySelector('.upload-combo').addEventListener('click', () => comboInput.click());
+        comboInput.addEventListener('change', async () => {
+          const file = comboInput.files[0];
+          if (!file) return;
+          if (p.comboUrl) URL.revokeObjectURL(p.comboUrl);
+          p.comboFile = file.name;
+          p.comboUrl = URL.createObjectURL(file);
+          p.comboAudio = new Audio(p.comboUrl);
+          renderRoster();
+          await saveAudioBlob(`player-${p.id}-combo`, file);
+          await savePlayers();
+        });
+
+        // Drag and drop reorder
+        card.addEventListener('dragstart', e => {
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', card.dataset.index);
+          requestAnimationFrame(() => card.classList.add('dragging'));
+        });
+        card.addEventListener('dragend', () => card.classList.remove('dragging'));
+        card.addEventListener('dragover', e => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          card.classList.add('drag-over');
+        });
+        card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+        card.addEventListener('drop', e => {
+          e.preventDefault();
+          card.classList.remove('drag-over');
+          const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+          const toIndex = parseInt(card.dataset.index);
+          if (fromIndex === toIndex) return;
+          const [moved] = players.splice(fromIndex, 1);
+          players.splice(toIndex, 0, moved);
+          renderRoster();
+          savePlayers();
+        });
+
+        rosterList.appendChild(card);
+      });
+    }
+
+    // ---- Play Page ----
+    function renderPlayPage() {
+      // SFX board
+      board.innerHTML = '';
+      sfxEmpty.style.display = sounds.length === 0 ? 'block' : 'none';
+      sounds.forEach(entry => {
+        const btn = document.createElement('button');
+        btn.className = 'sound-btn';
+        btn.textContent = entry.label || entry.fileName;
+        btn.addEventListener('click', () => {
+          playFromQueue([{ label: entry.label || entry.fileName, audio: entry.audio }]);
+        });
+        board.appendChild(btn);
+      });
+
+      // Lineup
+      lineupGrid.innerHTML = '';
+      lineupEmpty.style.display = players.length === 0 ? 'block' : 'none';
+      players.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'lineup-card';
+
+        const hasIntro = !!p.introAudio;
+        const hasSong = !!p.songAudio;
+        const hasCombo = !!p.comboAudio;
+
+        card.innerHTML = `
+          <div class="lc-name">
+            ${p.photoUrl ? `<img class="lc-photo" src="${p.photoUrl}" alt="${esc(p.name)}">` : '<div class="lc-photo-placeholder">&#128247;</div>'}
+            <div class="player-number">${esc(p.number)}</div>
+            ${esc(p.name)}
+          </div>
+          <div class="lc-buttons">
+            <button class="lc-btn intro-btn" ${!hasIntro ? 'disabled' : ''}>Intro</button>
+            <button class="lc-btn song-btn" ${!hasSong ? 'disabled' : ''}>Song</button>
+            <button class="lc-btn combo-btn full" ${!hasCombo ? 'disabled' : ''}>Combined</button>
+          </div>
+        `;
+
+        card.querySelector('.intro-btn').addEventListener('click', () => {
+          if (p.introAudio) playFromQueue([{ label: `${p.name} — Intro`, audio: p.introAudio }]);
+        });
+
+        card.querySelector('.song-btn').addEventListener('click', () => {
+          if (p.songAudio) playFromQueue([{ label: `${p.name} — Walk-up Song`, audio: p.songAudio }]);
+        });
+
+        card.querySelector('.combo-btn').addEventListener('click', () => {
+          if (p.comboAudio) playFromQueue([{ label: `${p.name} — Full Intro + Song`, audio: p.comboAudio }]);
+        });
+
+        lineupGrid.appendChild(card);
+      });
+    }
+
+    // ---- Playback Engine ----
+    function playFromQueue(queue) {
+      stopAll();
+      playQueue = queue;
+      queueIndex = 0;
+      playCurrentInQueue();
+    }
+
+    function playCurrentInQueue() {
+      if (queueIndex < 0 || queueIndex >= playQueue.length) {
+        isPlaying = false;
+        updateNowPlaying();
+        return;
+      }
+      const item = playQueue[queueIndex];
+      item.audio.currentTime = 0;
+      item.audio.play();
+      isPlaying = true;
+      updateNowPlaying();
+
+      item.audio.onended = () => {
+        queueIndex++;
+        if (queueIndex < playQueue.length) {
+          playCurrentInQueue();
+        } else {
+          isPlaying = false;
+          updateNowPlaying();
+        }
+      };
+    }
+
+    function stopAll() {
+      if (queueIndex >= 0 && queueIndex < playQueue.length) {
+        const audio = playQueue[queueIndex].audio;
+        fadeOut(audio, () => {
+          audio.currentTime = 0;
+          isPlaying = false;
+          playQueue = [];
+          queueIndex = -1;
+          updateNowPlaying();
+        });
+      } else {
+        isPlaying = false;
+        playQueue = [];
+        queueIndex = -1;
+        updateNowPlaying();
+      }
+    }
+
+    function fadeOut(audio, callback, duration = 1500) {
+      const startVolume = audio.volume;
+      const steps = 30;
+      const interval = duration / steps;
+      const volumeStep = startVolume / steps;
+      let step = 0;
+      const fade = setInterval(() => {
+        step++;
+        audio.volume = Math.max(0, startVolume - volumeStep * step);
+        if (step >= steps) {
+          clearInterval(fade);
+          audio.pause();
+          audio.volume = startVolume;
+          if (callback) callback();
+        }
+      }, interval);
+    }
+
+    function togglePlayPause() {
+      if (playQueue.length === 0) return;
+      if (queueIndex < 0 || queueIndex >= playQueue.length) return;
+      const audio = playQueue[queueIndex].audio;
+      if (isPlaying) {
+        audio.pause();
+        isPlaying = false;
+      } else {
+        audio.play();
+        isPlaying = true;
+      }
+      updateNowPlaying();
+    }
+
+    function skipNext() {
+      if (playQueue.length === 0) return;
+      if (queueIndex >= 0 && queueIndex < playQueue.length) {
+        playQueue[queueIndex].audio.pause();
+        playQueue[queueIndex].audio.currentTime = 0;
+      }
+      queueIndex++;
+      if (queueIndex < playQueue.length) {
+        playCurrentInQueue();
+      } else {
+        isPlaying = false;
+        updateNowPlaying();
+      }
+    }
+
+    function skipPrev() {
+      if (playQueue.length === 0) return;
+      if (queueIndex >= 0 && queueIndex < playQueue.length) {
+        playQueue[queueIndex].audio.pause();
+        playQueue[queueIndex].audio.currentTime = 0;
+      }
+      queueIndex = Math.max(0, queueIndex - 1);
+      playCurrentInQueue();
+    }
+
+    playPauseBtn.addEventListener('click', togglePlayPause);
+    document.getElementById('next-btn').addEventListener('click', skipNext);
+    document.getElementById('prev-btn').addEventListener('click', skipPrev);
+    document.getElementById('stop-btn').addEventListener('click', stopAll);
+
+    function updateNowPlaying() {
+      if (queueIndex >= 0 && queueIndex < playQueue.length) {
+        trackName.textContent = playQueue[queueIndex].label;
+        trackStatus.textContent = isPlaying ? 'Now playing' : 'Paused';
+        playPauseBtn.innerHTML = isPlaying ? '&#9208;' : '&#9654;';
+      } else {
+        trackName.textContent = 'Nothing playing';
+        trackStatus.textContent = 'Tap a button to play';
+        playPauseBtn.innerHTML = '&#9654;';
+        progressBar.style.width = '0%';
+      }
+    }
+
+    // Progress bar
+    setInterval(() => {
+      if (queueIndex >= 0 && queueIndex < playQueue.length) {
+        const audio = playQueue[queueIndex].audio;
+        if (audio.duration) {
+          progressBar.style.width = (audio.currentTime / audio.duration * 100) + '%';
+        }
+      }
+    }, 100);
+
+    // Utility
+    function esc(str) {
+      const d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
+    // ---- Theme Toggle ----
+    const themeBtn = document.getElementById('theme-toggle');
+    if (localStorage.getItem('padres-theme') === 'light') document.body.classList.add('light');
+    updateThemeIcon();
+    themeBtn.addEventListener('click', () => {
+      document.body.classList.toggle('light');
+      localStorage.setItem('padres-theme', document.body.classList.contains('light') ? 'light' : 'dark');
+      updateThemeIcon();
+    });
+    function updateThemeIcon() {
+      themeBtn.textContent = document.body.classList.contains('light') ? '\u263E' : '\u2606';
+    }
+
+    // ---- Boot ----
+    loadAllData().catch(err => console.error('Failed to load data:', err));
+  </script>
+</body>
+</html>
