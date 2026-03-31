@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#1E1610">
   <title>Padres Soundboard</title>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <style>
@@ -261,6 +264,93 @@
     #progress-bar {
       position: absolute; top: 0; left: 0; height: 3px;
       background: var(--accent); transition: width 0.1s linear; width: 0%;
+    }
+    /* --- Mobile Optimizations --- */
+    @media (max-width: 600px) {
+      /* Larger touch targets everywhere */
+      nav button { padding: 12px 8px; font-size: 0.9rem; }
+
+      .page { padding: 16px; padding-bottom: 130px; }
+
+      /* Header */
+      header { padding: 10px 12px !important; }
+      header svg { height: 32px !important; }
+      .theme-toggle { width: 34px; height: 34px; right: 10px; }
+
+      /* Drop zone smaller on mobile */
+      .drop-zone { padding: 28px 16px; }
+      .drop-zone p { font-size: 1rem; }
+
+      /* Upload items stack better */
+      .upload-item { flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
+      .upload-item .file-name { max-width: 100%; flex-basis: 100%; }
+      .upload-item input[type="text"] { min-width: 0; }
+
+      /* Add player row stacks */
+      .add-player-row { flex-wrap: wrap; gap: 8px; }
+      .add-player-row input:first-of-type { flex: 1; min-width: 0; }
+      .add-player-row input[style*="max-width"] { max-width: 50px !important; }
+      .add-player-row button { flex-basis: 100%; }
+
+      /* Player cards */
+      .player-card { padding: 12px; gap: 8px; }
+      .player-header { gap: 8px; }
+      .player-audio-row { padding-left: 0; flex-wrap: wrap; gap: 6px; }
+      .player-audio-row label { width: 70px; font-size: 0.75rem; }
+      .player-audio-row .file-label { flex-basis: calc(100% - 160px); min-width: 60px; }
+      .small-btn { padding: 8px 12px; font-size: 0.8rem; }
+
+      /* Sound board - fill width with 2 columns */
+      #board {
+        grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+        gap: 10px;
+      }
+      .sound-btn {
+        width: auto; height: 90px; font-size: 0.8rem; padding: 8px;
+        border-radius: 10px;
+      }
+
+      /* Lineup cards full width */
+      .lineup-grid { grid-template-columns: 1fr; gap: 10px; }
+      .lineup-card { padding: 12px; }
+      .lineup-card .lc-buttons { gap: 6px; }
+      .lineup-card .lc-btn { padding: 10px 6px; font-size: 0.8rem; }
+
+      /* Now playing bar */
+      #now-playing { padding: 10px 12px; gap: 10px; min-height: 64px; }
+      #now-playing .track-name { font-size: 0.85rem; }
+      #now-playing .controls { gap: 6px; }
+      #now-playing .controls button { width: 36px; height: 36px; }
+      #now-playing .controls .play-pause { width: 42px; height: 42px; }
+
+      /* Section titles */
+      .section-title { font-size: 1rem; margin: 16px 0 10px; }
+
+      /* Prevent zoom on input focus (iOS) */
+      input[type="text"], input[type="file"] { font-size: 16px; }
+    }
+
+    /* Extra small phones */
+    @media (max-width: 380px) {
+      #board { grid-template-columns: repeat(2, 1fr); }
+      .sound-btn { height: 80px; font-size: 0.75rem; }
+      .player-header { flex-wrap: wrap; }
+    }
+
+    /* Touch device optimizations */
+    @media (hover: none) {
+      .sound-btn:hover { background: var(--bg-card); transform: none; }
+      .sound-btn:active { background: var(--accent); border-color: var(--accent); color: var(--accent-on); transform: scale(0.96); }
+      .lineup-card .lc-btn:hover { background: var(--bg-deep); }
+      .lineup-card .lc-btn:active { background: var(--border-light); }
+      .lineup-card .lc-btn.full:hover { background: var(--accent); }
+      .lineup-card .lc-btn.full:active { background: var(--accent-hover); }
+    }
+
+    /* PWA standalone mode - account for safe areas */
+    @supports (padding-top: env(safe-area-inset-top)) {
+      header { padding-top: calc(10px + env(safe-area-inset-top)) !important; }
+      #now-playing { padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
     }
   </style>
 </head>
