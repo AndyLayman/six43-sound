@@ -311,143 +311,114 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script>
-    // ---- IndexedDB Persistence ----
-    const DB_NAME = 'padres-soundboard';
-    const DB_VERSION = 1;
-    let db;
+    // ---- Supabase Setup ----
+    const SUPABASE_URL = 'https://xrtetfxvyicdqfpwnpzt.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_Z5r38omcjP3khE-8Y8Tr0A_DSTGtSN9';
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    function openDB() {
-      return new Promise((resolve, reject) => {
-        const req = indexedDB.open(DB_NAME, DB_VERSION);
-        req.onupgradeneeded = e => {
-          const d = e.target.result;
-          if (!d.objectStoreNames.contains('sounds')) d.createObjectStore('sounds', { keyPath: 'id' });
-          if (!d.objectStoreNames.contains('players')) d.createObjectStore('players', { keyPath: 'id' });
-          if (!d.objectStoreNames.contains('audioFiles')) d.createObjectStore('audioFiles');
-          if (!d.objectStoreNames.contains('meta')) d.createObjectStore('meta');
-        };
-        req.onsuccess = e => { db = e.target.result; resolve(db); };
-        req.onerror = e => reject(e.target.error);
-      });
+    const STORAGE_BUCKET = 'media';
+
+    function storageUrl(path) {
+      return `${SUPABASE_URL}/storage/v1/object/public/${STORAGE_BUCKET}/${path}`;
     }
 
-    function dbPut(store, value, key) {
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(store, 'readwrite');
-        const s = tx.objectStore(store);
-        const req = key !== undefined ? s.put(value, key) : s.put(value);
-        req.onsuccess = () => resolve();
-        req.onerror = e => reject(e.target.error);
-      });
+    async function uploadFile(path, file) {
+      const { error } = await sb.storage.from(STORAGE_BUCKET).upload(path, file, { upsert: true });
+      if (error) console.error('Upload error:', error);
     }
 
-    function dbGet(store, key) {
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(store, 'readonly');
-        const req = tx.objectStore(store).get(key);
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = e => reject(e.target.error);
-      });
+    async function deleteFile(path) {
+      await sb.storage.from(STORAGE_BUCKET).remove([path]);
     }
 
-    function dbGetAll(store) {
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(store, 'readonly');
-        const req = tx.objectStore(store).getAll();
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = e => reject(e.target.error);
-      });
+    // ---- Sounds persistence ----
+    async function saveSoundToDB(entry) {
+      const { data, error } = await sb.from('sounds').upsert({
+        id: entry.id, file_name: entry.fileName, label: entry.label, sort_order: entry.sortOrder || 0
+      }).select();
+      if (error) console.error('Save sound error:', error);
+      return data;
     }
 
-    function dbDelete(store, key) {
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(store, 'readwrite');
-        const req = tx.objectStore(store).delete(key);
-        req.onsuccess = () => resolve();
-        req.onerror = e => reject(e.target.error);
-      });
+    async function deleteSoundFromDB(id) {
+      await sb.from('sounds').delete().eq('id', id);
+      await deleteFile(`sfx-${id}`);
     }
 
-    // Save a File/Blob to audioFiles store, keyed by a string like "sfx-3" or "player-5-intro"
-    function saveAudioBlob(key, file) {
-      return dbPut('audioFiles', file, key);
-    }
-
-    function loadAudioBlob(key) {
-      return dbGet('audioFiles', key);
-    }
-
-    // Persist the full sounds list metadata (no blobs)
     async function saveSounds() {
-      const data = sounds.map(s => ({ id: s.id, fileName: s.fileName, label: s.label }));
-      await dbPut('meta', data, 'sounds');
+      for (let i = 0; i < sounds.length; i++) {
+        sounds[i].sortOrder = i;
+        await sb.from('sounds').upsert({
+          id: sounds[i].id, file_name: sounds[i].fileName,
+          label: sounds[i].label, sort_order: i
+        });
+      }
     }
 
-    // Persist the full players list metadata (no blobs)
+    // ---- Players persistence ----
+    async function savePlayerToDB(p) {
+      const { data, error } = await sb.from('players').upsert({
+        id: p.id, name: p.name, number: p.number,
+        photo_file: p.photoFile, intro_file: p.introFile,
+        song_file: p.songFile, combo_file: p.comboFile,
+        sort_order: p.sortOrder || 0
+      }).select();
+      if (error) console.error('Save player error:', error);
+      return data;
+    }
+
+    async function deletePlayerFromDB(id) {
+      await sb.from('players').delete().eq('id', id);
+      for (const type of ['photo', 'intro', 'song', 'combo']) await deleteFile(`player-${id}-${type}`);
+    }
+
     async function savePlayers() {
-      const data = players.map(p => ({
-        id: p.id, name: p.name, number: p.number, photoFile: p.photoFile,
-        introFile: p.introFile, songFile: p.songFile, comboFile: p.comboFile
-      }));
-      await dbPut('meta', data, 'players');
-      await dbPut('meta', idCounter, 'idCounter');
+      for (let i = 0; i < players.length; i++) {
+        players[i].sortOrder = i;
+        await sb.from('players').upsert({
+          id: players[i].id, name: players[i].name, number: players[i].number,
+          photo_file: players[i].photoFile, intro_file: players[i].introFile,
+          song_file: players[i].songFile, combo_file: players[i].comboFile,
+          sort_order: i
+        });
+      }
     }
 
-    function blobToAudio(blob) {
-      const url = URL.createObjectURL(blob);
-      return { url, audio: new Audio(url) };
-    }
-
+    // ---- Load all data ----
     async function loadAllData() {
-      await openDB();
-
-      const savedIdCounter = await dbGet('meta', 'idCounter');
-      if (savedIdCounter != null) idCounter = savedIdCounter;
-
       // Load sounds
-      const savedSounds = await dbGet('meta', 'sounds');
-      if (savedSounds) {
-        for (const s of savedSounds) {
-          const blob = await loadAudioBlob(`sfx-${s.id}`);
-          if (!blob) continue;
-          const { url, audio } = blobToAudio(blob);
-          const entry = { id: s.id, fileName: s.fileName, label: s.label, url, audio };
+      const { data: soundRows } = await sb.from('sounds').select('*').order('sort_order');
+      if (soundRows) {
+        for (const s of soundRows) {
+          const url = storageUrl(`sfx-${s.id}`);
+          const entry = { id: s.id, fileName: s.file_name, label: s.label, url, audio: new Audio(url) };
           sounds.push(entry);
           renderSfxItem(entry);
-          if (s.id >= idCounter) idCounter = s.id + 1;
         }
       }
 
       // Load players
-      const savedPlayers = await dbGet('meta', 'players');
-      if (savedPlayers) {
-        for (const p of savedPlayers) {
+      const { data: playerRows } = await sb.from('players').select('*').order('sort_order');
+      if (playerRows) {
+        for (const p of playerRows) {
           const player = {
             id: p.id, name: p.name, number: p.number,
-            photoFile: p.photoFile || null, photoUrl: null,
-            introFile: p.introFile, introUrl: null, introAudio: null,
-            songFile: p.songFile, songUrl: null, songAudio: null,
-            comboFile: p.comboFile, comboUrl: null, comboAudio: null
+            photoFile: p.photo_file || null, photoUrl: null,
+            introFile: p.intro_file || null, introUrl: null, introAudio: null,
+            songFile: p.song_file || null, songUrl: null, songAudio: null,
+            comboFile: p.combo_file || null, comboUrl: null, comboAudio: null
           };
-          // Load photo
-          if (p.photoFile) {
-            const photoBlob = await loadAudioBlob(`player-${p.id}-photo`);
-            if (photoBlob) player.photoUrl = URL.createObjectURL(photoBlob);
-          }
-          // Load audio blobs
+          if (p.photo_file) player.photoUrl = storageUrl(`player-${p.id}-photo`);
           for (const type of ['intro', 'song', 'combo']) {
-            if (p[type + 'File']) {
-              const blob = await loadAudioBlob(`player-${p.id}-${type}`);
-              if (blob) {
-                const { url, audio } = blobToAudio(blob);
-                player[type + 'Url'] = url;
-                player[type + 'Audio'] = audio;
-              }
+            if (p[type + '_file']) {
+              const fileUrl = storageUrl(`player-${p.id}-${type}`);
+              player[type + 'Url'] = fileUrl;
+              player[type + 'Audio'] = new Audio(fileUrl);
             }
           }
           players.push(player);
-          if (p.id >= idCounter) idCounter = p.id + 1;
         }
         renderRoster();
       }
@@ -508,17 +479,18 @@
     async function handleSfxFiles(files) {
       for (const file of files) {
         if (!file.type.startsWith('audio/')) continue;
-        const url = URL.createObjectURL(file);
-        const entry = {
-          id: idCounter++, fileName: file.name,
-          label: file.name.replace(/\.[^.]+$/, ''),
-          url, audio: new Audio(url)
-        };
+        // Insert into DB to get a real ID
+        const { data, error } = await sb.from('sounds').insert({
+          file_name: file.name, label: file.name.replace(/\.[^.]+$/, ''),
+          sort_order: sounds.length
+        }).select().single();
+        if (error || !data) { console.error('Insert sound error:', error); continue; }
+        await uploadFile(`sfx-${data.id}`, file);
+        const url = storageUrl(`sfx-${data.id}`);
+        const entry = { id: data.id, fileName: data.file_name, label: data.label, url, audio: new Audio(url) };
         sounds.push(entry);
         renderSfxItem(entry);
-        await saveAudioBlob(`sfx-${entry.id}`, file);
       }
-      await saveSounds();
     }
 
     function renderSfxItem(entry) {
@@ -529,12 +501,16 @@
         <input type="text" value="${esc(entry.label)}" placeholder="Button label...">
         <button class="remove-btn">&times;</button>
       `;
-      li.querySelector('input').addEventListener('input', e => { entry.label = e.target.value; saveSounds(); });
+      let labelTimer;
+      li.querySelector('input').addEventListener('input', e => {
+        entry.label = e.target.value;
+        clearTimeout(labelTimer);
+        labelTimer = setTimeout(() => sb.from('sounds').update({ label: entry.label }).eq('id', entry.id), 500);
+      });
       li.querySelector('.remove-btn').addEventListener('click', async () => {
         sounds.splice(sounds.indexOf(entry), 1);
-        entry.audio.pause(); URL.revokeObjectURL(entry.url); li.remove();
-        await dbDelete('audioFiles', `sfx-${entry.id}`);
-        await saveSounds();
+        entry.audio.pause(); li.remove();
+        await deleteSoundFromDB(entry.id);
       });
       sfxList.appendChild(li);
     }
@@ -543,13 +519,17 @@
     document.getElementById('add-player-btn').addEventListener('click', addPlayer);
     document.getElementById('player-name-input').addEventListener('keydown', e => { if (e.key === 'Enter') addPlayer(); });
 
-    function addPlayer() {
+    async function addPlayer() {
       const nameInput = document.getElementById('player-name-input');
       const numInput = document.getElementById('player-number-input');
       const name = nameInput.value.trim();
       if (!name) return;
+      const { data, error } = await sb.from('players').insert({
+        name, number: numInput.value.trim() || '?', sort_order: players.length
+      }).select().single();
+      if (error || !data) { console.error('Insert player error:', error); return; }
       const player = {
-        id: idCounter++, name, number: numInput.value.trim() || '?',
+        id: data.id, name: data.name, number: data.number,
         photoFile: null, photoUrl: null,
         introFile: null, introUrl: null, introAudio: null,
         songFile: null, songUrl: null, songAudio: null,
@@ -559,7 +539,6 @@
       nameInput.value = ''; numInput.value = '';
       nameInput.focus();
       renderRoster();
-      savePlayers();
     }
 
     function renderRoster() {
@@ -609,23 +588,20 @@
         photoInput.addEventListener('change', async () => {
           const file = photoInput.files[0];
           if (!file) return;
-          if (p.photoUrl) URL.revokeObjectURL(p.photoUrl);
           p.photoFile = file.name;
-          p.photoUrl = URL.createObjectURL(file);
+          await uploadFile(`player-${p.id}-photo`, file);
+          p.photoUrl = storageUrl(`player-${p.id}-photo`) + '?t=' + Date.now();
           renderRoster();
-          await saveAudioBlob(`player-${p.id}-photo`, file);
-          await savePlayers();
+          await savePlayerToDB(p);
         });
 
         card.querySelector('.remove-player').addEventListener('click', async () => {
-          if (p.introAudio) { p.introAudio.pause(); URL.revokeObjectURL(p.introUrl); }
-          if (p.songAudio) { p.songAudio.pause(); URL.revokeObjectURL(p.songUrl); }
-          if (p.comboAudio) { p.comboAudio.pause(); URL.revokeObjectURL(p.comboUrl); }
-          if (p.photoUrl) URL.revokeObjectURL(p.photoUrl);
-          await dbDelete('audioFiles', `player-${p.id}-photo`);
-          for (const type of ['intro', 'song', 'combo']) await dbDelete('audioFiles', `player-${p.id}-${type}`);
+          if (p.introAudio) p.introAudio.pause();
+          if (p.songAudio) p.songAudio.pause();
+          if (p.comboAudio) p.comboAudio.pause();
           players.splice(players.indexOf(p), 1);
           renderRoster();
+          await deletePlayerFromDB(p.id);
           await savePlayers();
         });
 
@@ -634,13 +610,12 @@
         introInput.addEventListener('change', async () => {
           const file = introInput.files[0];
           if (!file) return;
-          if (p.introUrl) URL.revokeObjectURL(p.introUrl);
           p.introFile = file.name;
-          p.introUrl = URL.createObjectURL(file);
+          await uploadFile(`player-${p.id}-intro`, file);
+          p.introUrl = storageUrl(`player-${p.id}-intro`);
           p.introAudio = new Audio(p.introUrl);
           renderRoster();
-          await saveAudioBlob(`player-${p.id}-intro`, file);
-          await savePlayers();
+          await savePlayerToDB(p);
         });
 
         const songInput = card.querySelector('.song-file');
@@ -648,13 +623,12 @@
         songInput.addEventListener('change', async () => {
           const file = songInput.files[0];
           if (!file) return;
-          if (p.songUrl) URL.revokeObjectURL(p.songUrl);
           p.songFile = file.name;
-          p.songUrl = URL.createObjectURL(file);
+          await uploadFile(`player-${p.id}-song`, file);
+          p.songUrl = storageUrl(`player-${p.id}-song`);
           p.songAudio = new Audio(p.songUrl);
           renderRoster();
-          await saveAudioBlob(`player-${p.id}-song`, file);
-          await savePlayers();
+          await savePlayerToDB(p);
         });
 
         const comboInput = card.querySelector('.combo-file');
@@ -662,13 +636,12 @@
         comboInput.addEventListener('change', async () => {
           const file = comboInput.files[0];
           if (!file) return;
-          if (p.comboUrl) URL.revokeObjectURL(p.comboUrl);
           p.comboFile = file.name;
-          p.comboUrl = URL.createObjectURL(file);
+          await uploadFile(`player-${p.id}-combo`, file);
+          p.comboUrl = storageUrl(`player-${p.id}-combo`);
           p.comboAudio = new Audio(p.comboUrl);
           renderRoster();
-          await saveAudioBlob(`player-${p.id}-combo`, file);
-          await savePlayers();
+          await savePlayerToDB(p);
         });
 
         // Drag and drop reorder
