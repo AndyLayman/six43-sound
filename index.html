@@ -454,6 +454,26 @@
       }
     }
 
+    function compressImage(file, maxSize = 512, quality = 0.8) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          const canvas = document.createElement('canvas');
+          let w = img.width, h = img.height;
+          if (w > h) { if (w > maxSize) { h = h * maxSize / w; w = maxSize; } }
+          else { if (h > maxSize) { w = w * maxSize / h; h = maxSize; } }
+          canvas.width = w;
+          canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          canvas.toBlob(blob => resolve(blob), 'image/jpeg', quality);
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+        img.src = url;
+      });
+    }
+
     async function deleteFile(path) {
       await sb.storage.from(STORAGE_BUCKET).remove([path]);
     }
@@ -713,8 +733,10 @@
         photoInput.addEventListener('change', async () => {
           const file = photoInput.files[0];
           if (!file) return;
+          const compressed = await compressImage(file);
           p.photoFile = file.name;
-          await uploadFile(`player-${p.id}-photo`, file);
+          const blob = new File([compressed], 'photo.jpg', { type: 'image/jpeg' });
+          await uploadFile(`player-${p.id}-photo`, blob);
           p.photoUrl = storageUrl(`player-${p.id}-photo`) + '?t=' + Date.now();
           renderRoster();
           await savePlayerToDB(p);
