@@ -211,15 +211,15 @@
       background: var(--border-light); display: flex; align-items: center;
       justify-content: center; color: var(--text-dim); font-size: 0.85rem;
     }
-    .lineup-card .lc-buttons { display: flex; gap: 8px; align-items: center; }
+    .lineup-card .lc-buttons { display: flex; gap: 8px; align-items: stretch; }
     .lineup-card .lc-btn {
-      flex: 1; padding: 10px; border: 1px solid var(--border-light); border-radius: 6px;
+      flex: 1; height: 40px; border: 1px solid var(--border-light); border-radius: 6px;
       background: var(--bg-deep); color: var(--text); font-size: 0.9rem; font-weight: 600;
       cursor: pointer; display: flex; align-items: center; justify-content: center;
-      transition: all 0.15s;
+      transition: all 0.15s; padding: 0;
     }
     .lineup-card .lc-btn-sq {
-      flex: 0 0 40px; width: 40px; height: 40px; padding: 0;
+      flex: 0 0 40px; width: 40px;
     }
     .lineup-card .lc-btn:hover { background: var(--border-light); }
     .lineup-card .lc-btn.full { background: var(--accent); border-color: var(--accent); color: var(--accent-on); }
@@ -333,8 +333,8 @@
       .lineup-grid { grid-template-columns: 1fr; gap: 10px; }
       .lineup-card { padding: 12px; }
       .lineup-card .lc-buttons { gap: 6px; }
-      .lineup-card .lc-btn { padding: 8px; }
-      .lineup-card .lc-btn-sq { flex: 0 0 36px; width: 36px; height: 36px; padding: 0; }
+      .lineup-card .lc-btn { height: 36px; }
+      .lineup-card .lc-btn-sq { flex: 0 0 36px; width: 36px; }
 
       /* Now playing bar */
       #now-playing { padding: 10px 12px; gap: 10px; min-height: 64px; }
