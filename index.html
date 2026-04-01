@@ -286,18 +286,26 @@
       background: var(--accent); transition: width 0.1s linear; width: 0%;
     }
     #progress-runner {
-      position: absolute; top: -20px; right: -10px; width: 20px; height: 20px;
+      position: absolute; top: -28px; right: -12px; width: 24px; height: 28px;
       display: none;
     }
     #progress-runner.active { display: block; }
-    #progress-runner svg { width: 20px; height: 20px; }
-    @keyframes walk-legs {
-      0%, 100% { transform: rotate(-15deg); }
-      50% { transform: rotate(15deg); }
+    #progress-runner svg { width: 24px; height: 28px; }
+    @keyframes runner-back-leg {
+      0%, 100% { d: path("M11 17 L7 22 L5 22"); }
+      50% { d: path("M11 17 L13 22 L15 22"); }
     }
-    #progress-runner .leg-back { animation: walk-legs 0.4s ease-in-out infinite; transform-origin: 10px 12px; }
-    #progress-runner .leg-front { animation: walk-legs 0.4s ease-in-out infinite 0.2s; transform-origin: 10px 12px; }
-    #progress-runner .arm-bat { animation: walk-legs 0.3s ease-in-out infinite 0.1s; transform-origin: 10px 9px; }
+    @keyframes runner-front-leg {
+      0%, 100% { d: path("M11 17 L14 22 L16 22"); }
+      50% { d: path("M11 17 L8 22 L6 22"); }
+    }
+    @keyframes runner-back-arm {
+      0%, 100% { d: path("M11 11 L8 14"); }
+      50% { d: path("M11 11 L8 9"); }
+    }
+    #progress-runner .back-leg { animation: runner-back-leg 0.35s ease-in-out infinite; }
+    #progress-runner .front-leg { animation: runner-front-leg 0.35s ease-in-out infinite; }
+    #progress-runner .back-arm { animation: runner-back-arm 0.35s ease-in-out infinite; }
     /* --- Mobile Optimizations --- */
     @media (max-width: 600px) {
       /* Larger touch targets everywhere */
@@ -455,7 +463,22 @@
 
   <!-- Now Playing -->
   <div id="now-playing">
-    <div id="progress-bar"><div id="progress-runner"><svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="4" r="2.5" fill="var(--accent)"/><line class="leg-back" x1="10" y1="12" x2="7" y2="19" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"/><line class="leg-front" x1="10" y1="12" x2="13" y2="19" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"/><line x1="10" y1="7" x2="10" y2="13" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"/><line class="arm-bat" x1="10" y1="9" x2="15" y2="6" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"/><line x1="10" y1="9" x2="5" y2="11" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"/></svg></div></div>
+    <div id="progress-bar"><div id="progress-runner"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Helmet -->
+      <ellipse cx="11" cy="4" rx="3" ry="2.8" fill="var(--accent)"/>
+      <rect x="8" y="2.5" width="6.5" height="2" rx="1" fill="var(--accent)"/>
+      <rect x="13.5" y="3" width="2" height="1.2" rx="0.5" fill="var(--accent)"/>
+      <!-- Body -->
+      <path d="M11 7 L11 17" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round"/>
+      <!-- Back leg -->
+      <path class="back-leg" d="M11 17 L7 22 L5 22" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      <!-- Front leg -->
+      <path class="front-leg" d="M11 17 L14 22 L16 22" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      <!-- Back arm -->
+      <path class="back-arm" d="M11 11 L8 14" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/>
+      <!-- Bat arm + bat -->
+      <path d="M11 11 L15 8 L19 3" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg></div></div>
     <div class="track-info">
       <div class="track-name" id="track-name">Nothing playing</div>
       <div class="track-status" id="track-status">Add sounds and tap to play</div>
