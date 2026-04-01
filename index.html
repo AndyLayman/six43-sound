@@ -893,7 +893,11 @@
       }
       const item = playQueue[queueIndex];
       item.audio.currentTime = 0;
+      ensureAudioCtx();
+      connectToGain(item.audio);
+      gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
       item.audio.play();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
       isPlaying = true;
       updateNowPlaying();
 
@@ -926,23 +930,36 @@
       }
     }
 
-    function fadeOut(audio, callback, duration = 2000) {
-      const startVolume = audio.volume;
-      const startTime = performance.now();
-      function tick() {
-        const elapsed = performance.now() - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        // Exponential curve — sounds natural, fades fast then trails off
-        audio.volume = startVolume * Math.pow(1 - progress, 3);
-        if (progress < 1) {
-          requestAnimationFrame(tick);
-        } else {
-          audio.pause();
-          audio.volume = startVolume;
-          if (callback) callback();
-        }
+    // Web Audio API gain node for fade — works on iOS where audio.volume doesn't
+    let audioCtx, gainNode;
+    function ensureAudioCtx() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        gainNode = audioCtx.createGain();
+        gainNode.connect(audioCtx.destination);
       }
-      requestAnimationFrame(tick);
+    }
+
+    const connectedAudios = new WeakSet();
+    function connectToGain(audio) {
+      ensureAudioCtx();
+      if (!connectedAudios.has(audio)) {
+        const source = audioCtx.createMediaElementSource(audio);
+        source.connect(gainNode);
+        connectedAudios.add(audio);
+      }
+    }
+
+    function fadeOut(audio, callback, duration = 2000) {
+      ensureAudioCtx();
+      connectToGain(audio);
+      gainNode.gain.setValueAtTime(gainNode.gain.value, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration / 1000);
+      setTimeout(() => {
+        audio.pause();
+        gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
+        if (callback) callback();
+      }, duration);
     }
 
     function togglePlayPause() {
