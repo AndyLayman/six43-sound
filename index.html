@@ -165,6 +165,20 @@
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .player-audio-row .file-label.empty { color: var(--text-dim); font-style: italic; }
+    .player-positions {
+      display: flex; gap: 8px; padding-left: 44px; flex-wrap: wrap;
+    }
+    .player-positions .pos-group {
+      display: flex; align-items: center; gap: 4px;
+    }
+    .player-positions label {
+      font-size: 0.75rem; color: var(--text-muted); white-space: nowrap;
+    }
+    .player-positions select {
+      background: var(--bg-input); border: 1px solid var(--border-light); border-radius: 6px;
+      padding: 4px 6px; color: var(--text); font-size: 0.8rem; cursor: pointer;
+    }
+    .player-positions select:focus { outline: none; border-color: var(--accent); }
     .small-btn {
       background: var(--border-light); border: none; border-radius: 6px; color: var(--text);
       padding: 6px 12px; font-size: 0.8rem; cursor: pointer; white-space: nowrap;
@@ -317,6 +331,7 @@
       .player-card { padding: 12px; gap: 8px; }
       .player-header { gap: 8px; }
       .player-audio-row { padding-left: 0; flex-wrap: wrap; gap: 6px; }
+      .player-positions { padding-left: 0; }
       .player-audio-row label { width: 70px; font-size: 0.75rem; }
       .player-audio-row .file-label { flex-basis: calc(100% - 160px); min-width: 60px; }
       .small-btn { padding: 8px 12px; font-size: 0.8rem; }
@@ -539,6 +554,7 @@
         id: p.id, name: p.name, number: p.number,
         photo_file: p.photoFile, intro_file: p.introFile,
         song_file: p.songFile, combo_file: p.comboFile,
+        pos1: p.pos1 || '', pos2: p.pos2 || '', pos3: p.pos3 || '',
         sort_order: p.sortOrder || 0
       }).select();
       if (error) console.error('Save player error:', error);
@@ -557,6 +573,7 @@
           id: players[i].id, name: players[i].name, number: players[i].number,
           photo_file: players[i].photoFile, intro_file: players[i].introFile,
           song_file: players[i].songFile, combo_file: players[i].comboFile,
+          pos1: players[i].pos1 || '', pos2: players[i].pos2 || '', pos3: players[i].pos3 || '',
           sort_order: i
         });
       }
@@ -584,7 +601,8 @@
             photoFile: p.photo_file || null, photoUrl: null,
             introFile: p.intro_file || null, introUrl: null, introAudio: null,
             songFile: p.song_file || null, songUrl: null, songAudio: null,
-            comboFile: p.combo_file || null, comboUrl: null, comboAudio: null
+            comboFile: p.combo_file || null, comboUrl: null, comboAudio: null,
+            pos1: p.pos1 || '', pos2: p.pos2 || '', pos3: p.pos3 || ''
           };
           if (p.photo_file) player.photoUrl = storageUrl(`player-${p.id}-photo`);
           for (const type of ['intro', 'song', 'combo']) {
@@ -737,7 +755,8 @@
         photoFile: null, photoUrl: null,
         introFile: null, introUrl: null, introAudio: null,
         songFile: null, songUrl: null, songAudio: null,
-        comboFile: null, comboUrl: null, comboAudio: null
+        comboFile: null, comboUrl: null, comboAudio: null,
+        pos1: '', pos2: '', pos3: ''
       };
       players.push(player);
       nameInput.value = ''; numInput.value = '';
@@ -784,6 +803,17 @@
             <span class="file-label ${p.comboFile ? '' : 'empty'}">${p.comboFile ? esc(p.comboFile) : 'No file'}</span>
             <input type="file" accept="audio/*" class="file-input combo-file">
             <button class="small-btn upload-combo">Upload</button>
+          </div>
+          <div class="player-positions">
+            ${[['Inn 1:', 'pos1', p.pos1], ['Inn 2:', 'pos2', p.pos2], ['Inn 3:', 'pos3', p.pos3]].map(([lbl, cls, val]) => `
+              <div class="pos-group">
+                <label>${lbl}</label>
+                <select class="${cls}">
+                  <option value="">—</option>
+                  ${['P','C','1B','2B','3B','SS','LF','CF','RF','DH','BN'].map(pos => `<option value="${pos}" ${val === pos ? 'selected' : ''}>${pos}</option>`).join('')}
+                </select>
+              </div>
+            `).join('')}
           </div>
         `;
 
@@ -850,6 +880,16 @@
           await savePlayerToDB(p);
         });
 
+        // Position selects
+        let posTimer;
+        ['pos1', 'pos2', 'pos3'].forEach(key => {
+          card.querySelector(`select.${key}`).addEventListener('change', e => {
+            p[key] = e.target.value;
+            clearTimeout(posTimer);
+            posTimer = setTimeout(() => savePlayerToDB(p), 500);
+          });
+        });
+
         // Drag and drop reorder
         card.addEventListener('dragstart', e => {
           e.dataTransfer.effectAllowed = 'move';
@@ -906,11 +946,15 @@
         const hasSong = !!p.songAudio;
         const hasCombo = !!p.comboAudio;
 
+        const posText = [p.pos1, p.pos2, p.pos3].filter(Boolean).join(' / ');
         card.innerHTML = `
           <div class="lc-name">
             ${p.photoUrl ? `<img class="lc-photo" src="${p.photoUrl}" alt="${esc(p.name)}">` : '<div class="lc-photo-placeholder"><i data-lucide="camera" style="width:16px;height:16px;"></i></div>'}
             <div class="player-number">${esc(p.number)}</div>
-            ${esc(p.name)}
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:700;">${esc(p.name)}</div>
+              ${posText ? `<div style="font-size:0.7rem;color:var(--text-muted);">${esc(posText)}</div>` : ''}
+            </div>
           </div>
           <div class="lc-buttons">
             <button class="lc-btn lc-btn-sq intro-btn" ${!hasIntro ? 'disabled' : ''} title="Intro"><i data-lucide="mic" style="width:16px;height:16px;"></i></button>
