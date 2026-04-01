@@ -1010,11 +1010,11 @@
         setTimeout(() => {
           audio.pause();
           audio.currentTime = 0;
-          // Reset gain AFTER pause so there's no audible pop
-          requestAnimationFrame(() => {
+          // Wait for audio pipeline to fully drain before resetting gain
+          setTimeout(() => {
             gainNode.gain.cancelScheduledValues(audioCtx.currentTime);
             gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
-          });
+          }, 100);
           if (callback) callback();
         }, duration);
       } catch (e) {
