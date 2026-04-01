@@ -285,27 +285,6 @@
       position: absolute; top: 0; left: 0; height: 3px;
       background: var(--accent); transition: width 0.1s linear; width: 0%;
     }
-    #progress-runner {
-      position: absolute; top: -28px; right: -12px; width: 24px; height: 28px;
-      display: none;
-    }
-    #progress-runner.active { display: block; }
-    #progress-runner svg { width: 24px; height: 28px; }
-    @keyframes runner-back-leg {
-      0%, 100% { d: path("M11 17 L7 22 L5 22"); }
-      50% { d: path("M11 17 L13 22 L15 22"); }
-    }
-    @keyframes runner-front-leg {
-      0%, 100% { d: path("M11 17 L14 22 L16 22"); }
-      50% { d: path("M11 17 L8 22 L6 22"); }
-    }
-    @keyframes runner-back-arm {
-      0%, 100% { d: path("M11 11 L8 14"); }
-      50% { d: path("M11 11 L8 9"); }
-    }
-    #progress-runner .back-leg { animation: runner-back-leg 0.35s ease-in-out infinite; }
-    #progress-runner .front-leg { animation: runner-front-leg 0.35s ease-in-out infinite; }
-    #progress-runner .back-arm { animation: runner-back-arm 0.35s ease-in-out infinite; }
     /* --- Mobile Optimizations --- */
     @media (max-width: 600px) {
       /* Larger touch targets everywhere */
@@ -463,22 +442,7 @@
 
   <!-- Now Playing -->
   <div id="now-playing">
-    <div id="progress-bar"><div id="progress-runner"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <!-- Helmet -->
-      <ellipse cx="11" cy="4" rx="3" ry="2.8" fill="var(--accent)"/>
-      <rect x="8" y="2.5" width="6.5" height="2" rx="1" fill="var(--accent)"/>
-      <rect x="13.5" y="3" width="2" height="1.2" rx="0.5" fill="var(--accent)"/>
-      <!-- Body -->
-      <path d="M11 7 L11 17" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round"/>
-      <!-- Back leg -->
-      <path class="back-leg" d="M11 17 L7 22 L5 22" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-      <!-- Front leg -->
-      <path class="front-leg" d="M11 17 L14 22 L16 22" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-      <!-- Back arm -->
-      <path class="back-arm" d="M11 11 L8 14" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/>
-      <!-- Bat arm + bat -->
-      <path d="M11 11 L15 8 L19 3" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg></div></div>
+    <div id="progress-bar"></div>
     <div class="track-info">
       <div class="track-name" id="track-name">Nothing playing</div>
       <div class="track-status" id="track-status">Add sounds and tap to play</div>
@@ -659,7 +623,6 @@
     const trackName = document.getElementById('track-name');
     const trackStatus = document.getElementById('track-status');
     const progressBar = document.getElementById('progress-bar');
-    const progressRunner = document.getElementById('progress-runner');
     const playPauseBtn = document.getElementById('play-pause-btn');
 
     // ---- Settings Cog ----
@@ -1118,7 +1081,6 @@
       if (queueIndex >= 0 && queueIndex < playQueue.length) {
         trackName.textContent = playQueue[queueIndex].label;
         trackStatus.textContent = isPlaying ? 'Now playing' : 'Paused';
-        progressRunner.classList.toggle('active', isPlaying);
         playPauseBtn.innerHTML = isPlaying
           ? '<i data-lucide="pause" style="width:20px;height:20px;"></i>'
           : '<i data-lucide="play" style="width:20px;height:20px;"></i>';
@@ -1129,7 +1091,6 @@
         playPauseBtn.innerHTML = '<i data-lucide="play" style="width:20px;height:20px;"></i>';
         lucide.createIcons();
         progressBar.style.width = '0%';
-        progressRunner.classList.remove('active');
       }
     }
 
