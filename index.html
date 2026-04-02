@@ -161,6 +161,12 @@
       width: 32px; height: 32px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
+    .player-number-input {
+      background: var(--accent); color: var(--accent-on); font-weight: 700; font-size: 0.9rem;
+      width: 36px; height: 36px; border-radius: 50%; border: 2px solid transparent;
+      text-align: center; flex-shrink: 0; padding: 0;
+    }
+    .player-number-input:focus { border-color: var(--accent-on); outline: none; }
     .player-name-display { font-weight: 600; font-size: 1.05rem; flex: 1; }
     .player-audio-row {
       display: flex; align-items: center; gap: 8px; padding-left: 44px;
@@ -798,7 +804,7 @@
           <div class="player-header">
             <span class="drag-handle"><i data-lucide="grip-vertical" style="width:16px;height:16px;"></i></span>
             ${p.photoUrl ? `<img class="player-photo" src="${p.photoUrl}" alt="${esc(p.name)}">` : '<div class="player-photo-placeholder"><i data-lucide="camera" style="width:16px;height:16px;"></i></div>'}
-            <div class="player-number">${esc(p.number)}</div>
+            <input type="text" class="player-number-input" value="${esc(p.number)}" placeholder="#" title="Player number">
             <div class="player-name-display">${esc(p.name)}</div>
             <button class="bench-toggle" title="${p.active !== false ? 'Bench player' : 'Activate player'}">
               <i data-lucide="${p.active !== false ? 'user-check' : 'user-x'}" style="width:14px;height:14px;"></i>
@@ -835,6 +841,13 @@
           p.active = p.active === false ? true : false;
           await savePlayerToDB(p);
           renderRoster();
+        });
+
+        let numTimer;
+        card.querySelector('.player-number-input').addEventListener('input', e => {
+          p.number = e.target.value;
+          clearTimeout(numTimer);
+          numTimer = setTimeout(() => savePlayerToDB(p), 500);
         });
 
         const photoInput = card.querySelector('.photo-file');
