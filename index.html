@@ -290,6 +290,7 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     #now-playing .track-status { font-size: 0.8rem; color: var(--text-muted); }
+    #now-playing .time-display { font-size: 0.75rem; color: var(--text-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
     #now-playing .controls { display: flex; align-items: center; gap: 8px; }
     #now-playing .controls button {
       background: none; border: 2px solid var(--border-light); border-radius: 50%;
@@ -469,6 +470,7 @@
       <div class="track-name" id="track-name">Nothing playing</div>
       <div class="track-status" id="track-status">Add sounds and tap to play</div>
     </div>
+    <div class="time-display" id="time-display">0:00 / 0:00</div>
     <div class="controls">
       <button class="stop-btn" id="stop-btn" title="Stop"><i data-lucide="square" style="width:16px;height:16px;"></i></button>
       <button id="prev-btn" title="Previous"><i data-lucide="skip-back" style="width:16px;height:16px;"></i></button>
@@ -1192,13 +1194,23 @@
       }
     }
 
-    // Progress bar
+    // Progress bar + time display
+    const timeDisplay = document.getElementById('time-display');
+    function fmtTime(s) {
+      if (!s || !isFinite(s)) return '0:00';
+      const m = Math.floor(s / 60);
+      const sec = Math.floor(s % 60);
+      return m + ':' + String(sec).padStart(2, '0');
+    }
     setInterval(() => {
       if (queueIndex >= 0 && queueIndex < playQueue.length) {
         const audio = playQueue[queueIndex].audio;
         if (audio.duration) {
           progressBar.style.width = (audio.currentTime / audio.duration * 100) + '%';
+          timeDisplay.textContent = fmtTime(audio.currentTime) + ' / ' + fmtTime(audio.duration);
         }
+      } else {
+        timeDisplay.textContent = '0:00 / 0:00';
       }
     }, 100);
 
