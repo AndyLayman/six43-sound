@@ -790,7 +790,6 @@
             ${p.photoUrl ? `<img class="player-photo" src="${p.photoUrl}" alt="${esc(p.name)}">` : '<div class="player-photo-placeholder"><i data-lucide="camera" style="width:16px;height:16px;"></i></div>'}
             <div class="player-number">${esc(p.number)}</div>
             <div class="player-name-display">${esc(p.name)}</div>
-            <button class="small-btn danger remove-player">&times;</button>
           </div>
           <div class="player-audio-row">
             <label>Photo:</label>
@@ -830,16 +829,6 @@
           p.photoUrl = storageUrl(`player-${p.id}-photo`) + '?t=' + Date.now();
           renderRoster();
           await savePlayerToDB(p);
-        });
-
-        card.querySelector('.remove-player').addEventListener('click', async () => {
-          if (p.introAudio) p.introAudio.pause();
-          if (p.songAudio) p.songAudio.pause();
-          if (p.comboAudio) p.comboAudio.pause();
-          players.splice(players.indexOf(p), 1);
-          renderRoster();
-          await deletePlayerFromDB(p.id);
-          await savePlayers();
         });
 
         const introInput = card.querySelector('.intro-file');
