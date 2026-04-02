@@ -955,11 +955,20 @@
         return;
       }
       const item = playQueue[queueIndex];
+      // Stop any previously playing audio before touching gain
+      playQueue.forEach((q, i) => {
+        if (i !== queueIndex && !q.audio.paused) {
+          q.audio.pause();
+          q.audio.currentTime = 0;
+        }
+      });
       item.audio.currentTime = 0;
       try {
         ensureFadeReady(item.audio);
         gainNode.gain.cancelScheduledValues(audioCtx.currentTime);
-        gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
+        // Brief ramp to avoid click
+        gainNode.gain.setValueAtTime(0.001, audioCtx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(1, audioCtx.currentTime + 0.05);
       } catch(e) { /* first interaction may fail, audio still plays via default output */ }
       item.audio.play();
       isPlaying = true;
