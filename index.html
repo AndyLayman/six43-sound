@@ -1004,9 +1004,21 @@
 
     // ---- Playback Engine ----
     function playFromQueue(queue) {
-      stopAll();
+      // Fully stop and replace when starting something new
+      if (queueIndex >= 0 && queueIndex < playQueue.length) {
+        const audio = playQueue[queueIndex].audio;
+        audio.pause();
+        audio.currentTime = 0;
+      }
+      clearButtonPlaying();
       playQueue = queue;
       queueIndex = 0;
+      isPlaying = false;
+      // Reset gain immediately for new playback
+      if (gainNode && audioCtx) {
+        gainNode.gain.cancelScheduledValues(audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(0.001, audioCtx.currentTime);
+      }
       playCurrentInQueue();
     }
 
@@ -1049,21 +1061,19 @@
       };
     }
 
-    function stopAll() {
+    function stopAll(clearQueue) {
       clearButtonPlaying();
       if (queueIndex >= 0 && queueIndex < playQueue.length) {
         const audio = playQueue[queueIndex].audio;
         fadeOut(audio, () => {
-          audio.currentTime = 0;
+          // Keep position — don't reset currentTime or queue
           isPlaying = false;
-          playQueue = [];
-          queueIndex = -1;
+          if (clearQueue) { playQueue = []; queueIndex = -1; }
           updateNowPlaying();
         });
       } else {
         isPlaying = false;
-        playQueue = [];
-        queueIndex = -1;
+        if (clearQueue) { playQueue = []; queueIndex = -1; }
         updateNowPlaying();
       }
     }
@@ -1113,13 +1123,22 @@
     function togglePlayPause() {
       if (playQueue.length === 0) return;
       if (queueIndex < 0 || queueIndex >= playQueue.length) return;
-      const audio = playQueue[queueIndex].audio;
+      const item = playQueue[queueIndex];
       if (isPlaying) {
-        audio.pause();
+        clearButtonPlaying();
+        item.audio.pause();
         isPlaying = false;
       } else {
-        audio.play();
+        // Resume with gain ramp to avoid blip
+        try {
+          ensureFadeReady(item.audio);
+          gainNode.gain.cancelScheduledValues(audioCtx.currentTime);
+          gainNode.gain.setValueAtTime(0.001, audioCtx.currentTime);
+          gainNode.gain.linearRampToValueAtTime(1, audioCtx.currentTime + 0.05);
+        } catch(e) {}
+        item.audio.play();
         isPlaying = true;
+        setButtonPlaying(item.btn || null);
       }
       updateNowPlaying();
     }
@@ -1167,7 +1186,6 @@
         trackStatus.textContent = 'Tap a button to play';
         playPauseBtn.innerHTML = '<i data-lucide="play" style="width:20px;height:20px;"></i>';
         lucide.createIcons();
-        progressBar.style.width = '0%';
       }
     }
 
