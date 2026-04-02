@@ -1107,7 +1107,7 @@
           gainNode.gain.cancelScheduledValues(audioCtx.currentTime);
           gainNode.gain.setValueAtTime(0.001, audioCtx.currentTime);
           audio.pause();
-          audio.currentTime = 0;
+          // Don't reset currentTime — preserve position for resume
           // Don't reset gain here — playCurrentInQueue ramps it up when starting next song
           if (callback) callback();
         }, duration);
