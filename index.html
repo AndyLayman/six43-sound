@@ -186,9 +186,34 @@
       word-break: break-word; line-height: 1.2;
     }
     .sound-btn:hover { background: var(--border-light); transform: scale(1.05); }
-    .sound-btn:active, .sound-btn.playing {
-      background: var(--accent); border-color: var(--accent); color: var(--accent-on); transform: scale(0.96);
+    .sound-btn:active { transform: scale(0.96); }
+    .sound-btn.playing {
+      background: var(--accent); border-color: var(--accent); color: var(--accent-on);
+      transform: scale(1); flex-direction: column; gap: 6px;
     }
+    .sound-btn.playing .btn-label { display: none; }
+
+    /* Waveform animation */
+    .waveform { display: flex; align-items: center; justify-content: center; gap: 3px; height: 32px; }
+    .waveform .bar {
+      width: 4px; border-radius: 2px; background: var(--accent-on);
+      animation: wave 0.8s ease-in-out infinite alternate;
+    }
+    .waveform .bar:nth-child(1) { height: 30%; animation-delay: 0s; }
+    .waveform .bar:nth-child(2) { height: 60%; animation-delay: 0.15s; }
+    .waveform .bar:nth-child(3) { height: 100%; animation-delay: 0.3s; }
+    .waveform .bar:nth-child(4) { height: 60%; animation-delay: 0.45s; }
+    .waveform .bar:nth-child(5) { height: 30%; animation-delay: 0.6s; }
+    @keyframes wave {
+      0% { transform: scaleY(0.3); }
+      100% { transform: scaleY(1); }
+    }
+    .pause-icon { width: 20px; height: 20px; }
+
+    /* Playing state for lineup buttons */
+    .lc-btn.playing { background: var(--accent) !important; color: var(--accent-on) !important; outline-color: var(--accent) !important; }
+    .lc-btn.playing .waveform .bar { background: var(--accent-on); }
+    .lc-btn.playing .waveform { height: 20px; }
 
     .lineup-section { margin-top: 32px; }
     .lineup-grid {
@@ -892,9 +917,13 @@
       sounds.forEach(entry => {
         const btn = document.createElement('button');
         btn.className = 'sound-btn';
-        btn.textContent = entry.label || entry.fileName;
+        btn.innerHTML = `<span class="btn-label">${esc(entry.label || entry.fileName)}</span>`;
         btn.addEventListener('click', () => {
-          playFromQueue([{ label: entry.label || entry.fileName, audio: entry.audio }]);
+          if (btn.classList.contains('playing')) {
+            stopAll();
+          } else {
+            playFromQueue([{ label: entry.label || entry.fileName, audio: entry.audio, btn }]);
+          }
         });
         board.appendChild(btn);
       });
@@ -923,21 +952,57 @@
           </div>
         `;
 
-        card.querySelector('.intro-btn').addEventListener('click', () => {
-          if (p.introAudio) playFromQueue([{ label: `${p.name} — Intro`, audio: p.introAudio }]);
+        const introBtn = card.querySelector('.intro-btn');
+        introBtn.addEventListener('click', () => {
+          if (introBtn.classList.contains('playing')) { stopAll(); return; }
+          if (p.introAudio) playFromQueue([{ label: `${p.name} — Intro`, audio: p.introAudio, btn: introBtn }]);
         });
 
-        card.querySelector('.song-btn').addEventListener('click', () => {
-          if (p.songAudio) playFromQueue([{ label: `${p.name} — Walk-up Song`, audio: p.songAudio }]);
+        const songBtn = card.querySelector('.song-btn');
+        songBtn.addEventListener('click', () => {
+          if (songBtn.classList.contains('playing')) { stopAll(); return; }
+          if (p.songAudio) playFromQueue([{ label: `${p.name} — Walk-up Song`, audio: p.songAudio, btn: songBtn }]);
         });
 
-        card.querySelector('.combo-btn').addEventListener('click', () => {
-          if (p.comboAudio) playFromQueue([{ label: `${p.name} — Full Intro + Song`, audio: p.comboAudio }]);
+        const comboBtn = card.querySelector('.combo-btn');
+        comboBtn.addEventListener('click', () => {
+          if (comboBtn.classList.contains('playing')) { stopAll(); return; }
+          if (p.comboAudio) playFromQueue([{ label: `${p.name} — Full Intro + Song`, audio: p.comboAudio, btn: comboBtn }]);
         });
 
         lineupGrid.appendChild(card);
       });
       lucide.createIcons();
+    }
+
+    // ---- Button Playing State ----
+    const waveformHTML = `<div class="waveform"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>`;
+    let activePlayBtn = null;
+    let activeBtnOrigHTML = '';
+
+    function setButtonPlaying(btn) {
+      clearButtonPlaying();
+      if (!btn) return;
+      activePlayBtn = btn;
+      activeBtnOrigHTML = btn.innerHTML;
+      btn.classList.add('playing');
+      // For small buttons (lineup sq), just show pause icon
+      const isSmall = btn.classList.contains('lc-btn-sq');
+      if (isSmall) {
+        btn.innerHTML = waveformHTML;
+      } else {
+        btn.innerHTML = `${waveformHTML}<i data-lucide="pause" class="pause-icon"></i>`;
+      }
+      lucide.createIcons({ nodes: [btn] });
+    }
+
+    function clearButtonPlaying() {
+      if (!activePlayBtn) return;
+      activePlayBtn.classList.remove('playing');
+      activePlayBtn.innerHTML = activeBtnOrigHTML;
+      lucide.createIcons({ nodes: [activePlayBtn] });
+      activePlayBtn = null;
+      activeBtnOrigHTML = '';
     }
 
     // ---- Playback Engine ----
@@ -972,6 +1037,7 @@
       } catch(e) { /* first interaction may fail, audio still plays via default output */ }
       item.audio.play();
       isPlaying = true;
+      setButtonPlaying(item.btn || null);
       updateNowPlaying();
 
       item.audio.onended = () => {
@@ -979,6 +1045,7 @@
         if (queueIndex < playQueue.length) {
           playCurrentInQueue();
         } else {
+          clearButtonPlaying();
           isPlaying = false;
           updateNowPlaying();
         }
@@ -986,6 +1053,7 @@
     }
 
     function stopAll() {
+      clearButtonPlaying();
       if (queueIndex >= 0 && queueIndex < playQueue.length) {
         const audio = playQueue[queueIndex].audio;
         fadeOut(audio, () => {
