@@ -1033,12 +1033,7 @@
           gainNode.gain.setValueAtTime(0.001, audioCtx.currentTime);
           audio.pause();
           audio.currentTime = 0;
-          // Reset gain after pause has fully settled
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
-            });
-          });
+          // Don't reset gain here — playCurrentInQueue ramps it up when starting next song
           if (callback) callback();
         }, duration);
       } catch (e) {
