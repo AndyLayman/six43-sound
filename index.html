@@ -170,6 +170,7 @@
     .player-name-display { font-weight: 600; font-size: 1.05rem; flex: 1; }
     .player-audio-row {
       display: flex; align-items: center; gap: 8px; padding-left: 44px;
+      flex-wrap: wrap;
     }
     .player-audio-row label {
       font-size: 0.8rem; color: var(--text-muted); width: 80px; flex-shrink: 0;
@@ -186,16 +187,23 @@
     .small-btn:hover { background: var(--text-dim); }
     .small-btn.danger { background: none; color: var(--text-dim); }
     .small-btn.danger:hover { color: var(--accent); }
+    .upload-progress-wrap {
+      display: none; width: 100%; padding-left: 80px; margin-top: -4px;
+    }
+    .upload-progress-wrap.active { display: block; }
+    .upload-progress-bar {
+      height: 4px; border-radius: 2px; background: var(--border-light); overflow: hidden;
+    }
+    .upload-progress-bar .fill {
+      height: 100%; width: 0%; background: var(--accent); border-radius: 2px;
+      transition: width 0.15s;
+    }
+    .upload-progress-bar .fill.success { background: #4CAF50; }
+    .upload-progress-bar .fill.error { background: #E53935; }
     .upload-status {
       display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem;
-      min-width: 20px; transition: opacity 0.3s;
+      min-width: 20px;
     }
-    .upload-status .spinner {
-      width: 14px; height: 14px; border: 2px solid var(--border-light);
-      border-top-color: var(--accent); border-radius: 50%;
-      animation: spin 0.6s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
     .upload-status .check { color: #4CAF50; font-weight: bold; }
     .upload-status .fail { color: #E53935; font-weight: bold; }
 
@@ -536,19 +544,34 @@
       return a;
     }
 
-    async function uploadFile(path, file) {
+    async function uploadFile(path, file, onProgress) {
       // Remove existing file first to ensure clean replace
       await sb.storage.from(STORAGE_BUCKET).remove([path]);
-      const { error } = await sb.storage.from(STORAGE_BUCKET).upload(path, file, {
-        upsert: true,
-        contentType: file.type,
-        cacheControl: '0'
+      return new Promise((resolve) => {
+        const xhr = new XMLHttpRequest();
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total);
+        });
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            if (onProgress) onProgress(1);
+            resolve(true);
+          } else {
+            console.error('Upload error:', path, xhr.status, xhr.responseText);
+            resolve(false);
+          }
+        });
+        xhr.addEventListener('error', () => {
+          console.error('Upload network error:', path);
+          resolve(false);
+        });
+        xhr.open('POST', `${SUPABASE_URL}/storage/v1/object/${STORAGE_BUCKET}/${path}`);
+        xhr.setRequestHeader('Authorization', `Bearer ${SUPABASE_KEY}`);
+        xhr.setRequestHeader('apikey', SUPABASE_KEY);
+        xhr.setRequestHeader('x-upsert', 'true');
+        xhr.setRequestHeader('Cache-Control', 'no-cache');
+        xhr.send(file);
       });
-      if (error) {
-        console.error('Upload error:', path, error);
-        return false;
-      }
-      return true;
     }
 
     function compressImage(file, maxSize = 512, quality = 0.8) {
@@ -853,6 +876,7 @@
             <input type="file" accept="image/*" class="file-input photo-file">
             <button class="small-btn upload-photo">Upload</button>
             <span class="upload-status photo-status"></span>
+            <div class="upload-progress-wrap photo-progress"><div class="upload-progress-bar"><div class="fill"></div></div></div>
           </div>
           <div class="player-audio-row">
             <label>Intro:</label>
@@ -860,6 +884,7 @@
             <input type="file" accept="audio/*" class="file-input intro-file">
             <button class="small-btn upload-intro">Upload</button>
             <span class="upload-status intro-status"></span>
+            <div class="upload-progress-wrap intro-progress"><div class="upload-progress-bar"><div class="fill"></div></div></div>
           </div>
           <div class="player-audio-row">
             <label>Walk-up:</label>
@@ -867,6 +892,7 @@
             <input type="file" accept="audio/*" class="file-input song-file">
             <button class="small-btn upload-song">Upload</button>
             <span class="upload-status song-status"></span>
+            <div class="upload-progress-wrap song-progress"><div class="upload-progress-bar"><div class="fill"></div></div></div>
           </div>
           <div class="player-audio-row">
             <label>Combined:</label>
@@ -874,6 +900,7 @@
             <input type="file" accept="audio/*" class="file-input combo-file">
             <button class="small-btn upload-combo">Upload</button>
             <span class="upload-status combo-status"></span>
+            <div class="upload-progress-wrap combo-progress"><div class="upload-progress-bar"><div class="fill"></div></div></div>
           </div>
         `;
 
@@ -890,95 +917,101 @@
           numTimer = setTimeout(() => savePlayerToDB(p), 500);
         });
 
-        function showStatus(el, state) {
-          if (state === 'loading') el.innerHTML = '<span class="spinner"></span>';
-          else if (state === 'success') {
-            el.innerHTML = '<span class="check">&#10003;</span>';
-            setTimeout(() => { el.innerHTML = ''; }, 3000);
-          } else {
-            el.innerHTML = '<span class="fail">&#10007; Failed</span>';
-            setTimeout(() => { el.innerHTML = ''; }, 4000);
-          }
+        function startProgress(progressEl, statusEl) {
+          const fill = progressEl.querySelector('.fill');
+          fill.className = 'fill';
+          fill.style.width = '0%';
+          progressEl.classList.add('active');
+          statusEl.innerHTML = '';
+          return (pct) => { fill.style.width = (pct * 100) + '%'; };
+        }
+        function endProgress(progressEl, statusEl, success) {
+          const fill = progressEl.querySelector('.fill');
+          fill.style.width = '100%';
+          fill.classList.add(success ? 'success' : 'error');
+          statusEl.innerHTML = success
+            ? '<span class="check">&#10003;</span>'
+            : '<span class="fail">&#10007; Failed</span>';
+          setTimeout(() => {
+            progressEl.classList.remove('active');
+            statusEl.innerHTML = '';
+          }, success ? 3000 : 4000);
         }
 
         const photoInput = card.querySelector('.photo-file');
         const photoStatus = card.querySelector('.photo-status');
+        const photoProgress = card.querySelector('.photo-progress');
         card.querySelector('.upload-photo').addEventListener('click', () => photoInput.click());
         photoInput.addEventListener('change', async () => {
           const file = photoInput.files[0];
           if (!file) return;
-          showStatus(photoStatus, 'loading');
+          const onProgress = startProgress(photoProgress, photoStatus);
           const compressed = await compressImage(file);
           p.photoFile = file.name;
           const blob = new File([compressed], 'photo.jpg', { type: 'image/jpeg' });
-          const ok = await uploadFile(`player-${p.id}-photo`, blob);
+          const ok = await uploadFile(`player-${p.id}-photo`, blob, onProgress);
+          endProgress(photoProgress, photoStatus, ok);
           if (ok) {
             p.photoUrl = storageUrl(`player-${p.id}-photo`) + '?t=' + Date.now();
-            showStatus(photoStatus, 'success');
             renderRoster();
             await savePlayerToDB(p);
-          } else {
-            showStatus(photoStatus, 'error');
           }
         });
 
         const introInput = card.querySelector('.intro-file');
         const introStatus = card.querySelector('.intro-status');
+        const introProgress = card.querySelector('.intro-progress');
         card.querySelector('.upload-intro').addEventListener('click', () => introInput.click());
         introInput.addEventListener('change', async () => {
           const file = introInput.files[0];
           if (!file) return;
-          showStatus(introStatus, 'loading');
+          const onProgress = startProgress(introProgress, introStatus);
           p.introFile = file.name;
-          const ok = await uploadFile(`player-${p.id}-intro`, file);
+          const ok = await uploadFile(`player-${p.id}-intro`, file, onProgress);
+          endProgress(introProgress, introStatus, ok);
           if (ok) {
             p.introUrl = storageUrl(`player-${p.id}-intro`);
             p.introAudio = makeAudio(p.introUrl);
-            showStatus(introStatus, 'success');
             renderRoster();
             await savePlayerToDB(p);
-          } else {
-            showStatus(introStatus, 'error');
           }
         });
 
         const songInput = card.querySelector('.song-file');
         const songStatus = card.querySelector('.song-status');
+        const songProgress = card.querySelector('.song-progress');
         card.querySelector('.upload-song').addEventListener('click', () => songInput.click());
         songInput.addEventListener('change', async () => {
           const file = songInput.files[0];
           if (!file) return;
-          showStatus(songStatus, 'loading');
+          const onProgress = startProgress(songProgress, songStatus);
           p.songFile = file.name;
-          const ok = await uploadFile(`player-${p.id}-song`, file);
+          const ok = await uploadFile(`player-${p.id}-song`, file, onProgress);
+          endProgress(songProgress, songStatus, ok);
           if (ok) {
             p.songUrl = storageUrl(`player-${p.id}-song`);
             p.songAudio = makeAudio(p.songUrl);
-            showStatus(songStatus, 'success');
             renderRoster();
             await savePlayerToDB(p);
-          } else {
-            showStatus(songStatus, 'error');
           }
         });
 
         const comboInput = card.querySelector('.combo-file');
         const comboStatus = card.querySelector('.combo-status');
+        const comboProgress = card.querySelector('.combo-progress');
         card.querySelector('.upload-combo').addEventListener('click', () => comboInput.click());
         comboInput.addEventListener('change', async () => {
           const file = comboInput.files[0];
           if (!file) return;
-          showStatus(comboStatus, 'loading');
+          const onProgress = startProgress(comboProgress, comboStatus);
           p.comboFile = file.name;
-          const ok = await uploadFile(`player-${p.id}-combo`, file);
+          const ok = await uploadFile(`player-${p.id}-combo`, file, onProgress);
+          endProgress(comboProgress, comboStatus, ok);
           if (ok) {
             p.comboUrl = storageUrl(`player-${p.id}-combo`);
             p.comboAudio = makeAudio(p.comboUrl);
-            showStatus(comboStatus, 'success');
             renderRoster();
             await savePlayerToDB(p);
-          } else {
-            showStatus(comboStatus, 'error');
           }
         });
 
