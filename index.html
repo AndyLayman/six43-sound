@@ -88,24 +88,24 @@
     .grad-border {
       border: none !important;
       background: linear-gradient(var(--bg-input), var(--bg-input)) padding-box,
-                  linear-gradient(135deg, var(--teal), var(--green), var(--purple)) border-box;
+                  conic-gradient(from 180deg at 50% -18.18%, var(--teal) 0deg, var(--green) 128.08deg, var(--purple) 264.81deg, var(--teal) 360deg) border-box;
       border: 1px solid transparent !important;
     }
     .grad-border:hover {
       background: linear-gradient(var(--gray-800), var(--gray-800)) padding-box,
-                  linear-gradient(135deg, var(--teal), var(--green), var(--purple)) border-box;
+                  conic-gradient(from 180deg at 50% -18.18%, var(--teal) 0deg, var(--green) 128.08deg, var(--purple) 264.81deg, var(--teal) 360deg) border-box;
       box-shadow: var(--glow-accent);
     }
     .grad-border-dark {
       border: none !important;
       background: linear-gradient(var(--bg-deep), var(--bg-deep)) padding-box,
-                  linear-gradient(135deg, var(--teal), var(--green), var(--purple)) border-box;
+                  conic-gradient(from 180deg at 50% -18.18%, var(--teal) 0deg, var(--green) 128.08deg, var(--purple) 264.81deg, var(--teal) 360deg) border-box;
       border: 1px solid transparent !important;
     }
     .grad-border-transparent {
       border: none !important;
       background: linear-gradient(var(--black), var(--black)) padding-box,
-                  linear-gradient(135deg, var(--teal), var(--green), var(--purple)) border-box;
+                  conic-gradient(from 180deg at 50% -18.18%, var(--teal) 0deg, var(--green) 128.08deg, var(--purple) 264.81deg, var(--teal) 360deg) border-box;
       border: 1px solid transparent !important;
     }
 
@@ -122,7 +122,7 @@
     .settings-toggle {
       position: absolute; left: var(--sp-3); top: 50%; transform: translateY(-50%);
       background: linear-gradient(var(--bg-deep), var(--bg-deep)) padding-box,
-                  linear-gradient(135deg, var(--teal), var(--green), var(--purple)) border-box;
+                  conic-gradient(from 180deg at 50% -18.18%, var(--teal) 0deg, var(--green) 128.08deg, var(--purple) 264.81deg, var(--teal) 360deg) border-box;
       border: 1px solid transparent; border-radius: var(--r-full);
       color: var(--text-muted); cursor: pointer;
       width: 38px; height: 38px; display: flex; align-items: center;
@@ -217,7 +217,7 @@
     }
     .add-player-row input:focus { outline: none; border-color: var(--teal); box-shadow: var(--glow-teal); }
     .add-player-row button {
-      background: var(--accent-linear); border: none; border-radius: var(--r-2);
+      background: var(--accent-gradient); border: none; border-radius: var(--r-2);
       color: var(--black); padding: 10px 20px; font-family: var(--font);
       font-weight: var(--font-weight); cursor: pointer; font-size: var(--text-base);
       white-space: nowrap; transition: all var(--duration-fast) var(--ease-in-out);
@@ -296,7 +296,7 @@
     .player-audio-row .file-label.empty { color: var(--text-dim); font-style: italic; }
     .small-btn {
       background: linear-gradient(var(--bg-input), var(--bg-input)) padding-box,
-                  linear-gradient(135deg, var(--teal), var(--green), var(--purple)) border-box;
+                  conic-gradient(from 180deg at 50% -18.18%, var(--teal) 0deg, var(--green) 128.08deg, var(--purple) 264.81deg, var(--teal) 360deg) border-box;
       border: 1px solid transparent; border-radius: var(--r-1);
       color: var(--text-muted); padding: 6px 12px; font-family: var(--font);
       font-weight: var(--font-weight); font-size: var(--text-sm); cursor: pointer; white-space: nowrap;
@@ -333,7 +333,7 @@
     .sound-btn {
       width: 120px; height: 120px;
       background: linear-gradient(var(--bg-card), var(--bg-card)) padding-box,
-                  linear-gradient(135deg, var(--teal), var(--green), var(--purple)) border-box;
+                  conic-gradient(from 180deg at 50% -18.18%, var(--teal) 0deg, var(--green) 128.08deg, var(--purple) 264.81deg, var(--teal) 360deg) border-box;
       border: 1px solid transparent;
       border-radius: var(--r-2); color: var(--text); font-family: var(--font);
       font-weight: var(--font-weight); font-size: var(--text-sm);
@@ -344,7 +344,7 @@
     .sound-btn:hover { transform: scale(1.03); box-shadow: var(--glow-accent); }
     .sound-btn:active { transform: scale(0.97); }
     .sound-btn.playing {
-      background: var(--accent-linear); border-color: transparent; color: var(--black);
+      background: var(--accent-gradient); border-color: transparent; color: var(--black);
       transform: scale(1); flex-direction: column; gap: 6px;
       box-shadow: var(--glow-accent);
       animation: pulseGlow 2s ease-in-out infinite;
@@ -371,7 +371,7 @@
     .pause-icon { width: 20px; height: 20px; }
 
     /* Playing state for lineup buttons */
-    .lc-btn.playing { background: var(--accent-linear) !important; color: var(--black) !important; outline: none !important; border: none !important; box-shadow: var(--glow-accent); }
+    .lc-btn.playing { background: var(--accent-gradient) !important; color: var(--black) !important; outline: none !important; border: none !important; box-shadow: var(--glow-accent); }
     .lc-btn.playing .waveform { height: 20px; width: 36px; }
 
     .lineup-section { margin-top: var(--sp-5); }
@@ -405,7 +405,7 @@
     .lineup-card .lc-btn {
       flex: 1; height: 40px; min-height: 40px; max-height: 40px;
       background: linear-gradient(var(--bg-deep), var(--bg-deep)) padding-box,
-                  linear-gradient(135deg, var(--teal), var(--green), var(--purple)) border-box;
+                  conic-gradient(from 180deg at 50% -18.18%, var(--teal) 0deg, var(--green) 128.08deg, var(--purple) 264.81deg, var(--teal) 360deg) border-box;
       border: 1px solid transparent; border-radius: var(--r-1);
       color: var(--text-muted); font-family: var(--font);
       font-weight: var(--font-weight); font-size: var(--text-sm);
@@ -417,7 +417,7 @@
     }
     .lineup-card .lc-btn:hover { color: var(--teal); box-shadow: var(--glow-accent); }
     .lineup-card .lc-btn.full {
-      background: var(--accent-linear); color: var(--black); border: none;
+      background: var(--accent-gradient); color: var(--black); border: none;
     }
     .lineup-card .lc-btn.full:hover { box-shadow: var(--glow-accent); transform: scale(1.03); }
     .lineup-card .lc-btn:disabled { opacity: 0.2; cursor: not-allowed; }
@@ -473,7 +473,7 @@
     #now-playing .controls { display: flex; align-items: center; gap: var(--sp-2); }
     #now-playing .controls button {
       background: linear-gradient(rgba(20,20,20,0.9), rgba(20,20,20,0.9)) padding-box,
-                  linear-gradient(135deg, var(--teal), var(--green), var(--purple)) border-box;
+                  conic-gradient(from 180deg at 50% -18.18%, var(--teal) 0deg, var(--green) 128.08deg, var(--purple) 264.81deg, var(--teal) 360deg) border-box;
       border: 1px solid transparent; border-radius: var(--r-full);
       width: 42px; height: 42px; color: var(--text-muted);
       cursor: pointer; display: flex; align-items: center;
@@ -574,7 +574,7 @@
       .sound-btn:active { border-color: var(--teal); transform: scale(0.97); box-shadow: var(--glow-teal); }
       .lineup-card .lc-btn:hover { background: var(--bg-deep); border-color: var(--border); color: var(--text-muted); }
       .lineup-card .lc-btn:active { border-color: var(--teal); color: var(--teal); }
-      .lineup-card .lc-btn.full:hover { background: var(--accent-linear); box-shadow: none; transform: none; }
+      .lineup-card .lc-btn.full:hover { background: var(--accent-gradient); box-shadow: none; transform: none; }
       .lineup-card .lc-btn.full:active { box-shadow: var(--glow-accent); }
     }
 
