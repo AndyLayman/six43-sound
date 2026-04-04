@@ -1418,7 +1418,10 @@
       const item = playQueue[queueIndex];
       if (isPlaying) {
         clearButtonPlaying();
-        item.audio.pause();
+        fadeOut(item.audio, () => {
+          isPlaying = false;
+          updateNowPlaying();
+        });
         isPlaying = false;
       } else {
         // Resume with gain ramp to avoid blip
