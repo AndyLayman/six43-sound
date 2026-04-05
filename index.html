@@ -1750,6 +1750,10 @@
           q.audio.currentTime = 0;
         }
       });
+      // Reload audio if it errored or never loaded
+      if (item.audio.error || item.audio.readyState === 0) {
+        item.audio.load();
+      }
       item.audio.currentTime = 0;
       // Ensure audio can play through Web Audio if previously connected
       if (audioGains.has(item.audio)) {
@@ -1762,14 +1766,14 @@
         ensureAudioCtx();
         fadeIn(item.audio, CROSSFADE_DURATION);
       }
-      const playPromise = item.audio.play();
-      if (playPromise) {
-        playPromise.catch(e => {
-          console.warn('Play failed, retrying:', e);
-          // iOS often needs a tiny delay after currentTime reset
-          setTimeout(() => item.audio.play().catch(e2 => console.error('Retry failed:', e2)), 50);
-        });
-      }
+      item.audio.play().then(() => {
+        console.log('Playing:', item.label || item.name, 'readyState:', item.audio.readyState);
+      }).catch(e => {
+        console.warn('Play failed:', e, 'readyState:', item.audio.readyState, 'error:', item.audio.error);
+        // Retry after reload
+        item.audio.load();
+        setTimeout(() => item.audio.play().catch(e2 => console.error('Retry failed:', e2)), 200);
+      });
       isPlaying = true;
       setButtonPlaying(item.btn || null);
       updateNowPlaying();
