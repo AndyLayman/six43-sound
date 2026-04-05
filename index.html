@@ -675,6 +675,12 @@
 
       .section-title { font-size: var(--text-base); margin: var(--sp-3) 0 var(--sp-2); }
 
+      .library-controls { gap: var(--sp-2); }
+      #add-song-btn .btn-label,
+      #play-all-btn .btn-label { display: none; }
+      #add-song-btn,
+      #play-all-btn { padding: var(--sp-2); }
+
       input[type="text"], input[type="file"] { font-size: 16px; }
     }
 
@@ -781,8 +787,8 @@
           <i data-lucide="search" style="width:16px;height:16px;color:var(--text-dim);"></i>
           <input type="text" id="library-search" placeholder="Search songs...">
         </div>
-        <button class="small-btn primary" id="play-all-btn"><i data-lucide="play" style="width:14px;height:14px;"></i> Play All</button>
-        <button class="small-btn" id="add-song-btn"><i data-lucide="plus" style="width:14px;height:14px;"></i> Add Song</button>
+        <button class="small-btn primary" id="play-all-btn"><i data-lucide="play" style="width:14px;height:14px;"></i><span class="btn-label"> Play All</span></button>
+        <button class="small-btn" id="add-song-btn"><i data-lucide="plus" style="width:14px;height:14px;"></i><span class="btn-label"> Add Song</span></button>
       </div>
       <div id="library-list" class="library-list"></div>
       <div id="library-empty" class="empty-state" style="margin-top:20px;">
