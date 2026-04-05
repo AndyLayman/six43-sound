@@ -1182,12 +1182,16 @@
             <div class="song-meta">${song.artist ? song.artist + ' · ' : ''}${song.category.split(',').map(c => categoryLabels[c.trim()] || c.trim()).join(', ')}</div>
           </div>
           <div class="song-actions">
+            <button class="queue-song" title="Add to Queue"><i data-lucide="list-plus" style="width:14px;height:14px;"></i></button>
             <button class="play-song" title="Play"><i data-lucide="play" style="width:14px;height:14px;"></i></button>
             <button class="delete-song" title="Delete"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button>
           </div>
         `;
+        div.querySelector('.queue-song').addEventListener('click', () => {
+          addToLibraryQueue(song);
+        });
         div.querySelector('.play-song').addEventListener('click', () => {
-          playFromQueue([{ audio: song.audio, name: song.title }]);
+          playFromQueue([{ audio: song.audio, name: song.title }], { crossfade: true });
         });
         div.querySelector('.delete-song').addEventListener('click', async () => {
           if (confirm(`Delete "${song.title}"?`)) await deleteLibrarySong(song.id);
@@ -1584,6 +1588,23 @@
     let crossfadeEnabled = false;
     const CROSSFADE_DURATION = 2; // seconds
     let crossfadeTimer = null;
+
+    function addToLibraryQueue(song) {
+      const item = { audio: song.audio, name: song.title };
+      if (!isPlaying || playQueue.length === 0) {
+        // Nothing playing — start it
+        playFromQueue([item], { crossfade: true });
+      } else {
+        // Append to current queue
+        playQueue.push(item);
+        crossfadeEnabled = true;
+        // If this is the only upcoming song, schedule crossfade for current track
+        if (playQueue.length - 1 === queueIndex + 1) {
+          const currentAudio = playQueue[queueIndex].audio;
+          scheduleCrossfade(currentAudio);
+        }
+      }
+    }
 
     function playFromQueue(queue, { crossfade = false } = {}) {
       if (crossfadeTimer) { clearTimeout(crossfadeTimer); crossfadeTimer = null; }
