@@ -1144,7 +1144,7 @@
       saveBtn.disabled = true;
       saveBtn.textContent = 'Uploading...';
 
-      const uploaded = await uploadFile(file, `library-${id}`);
+      const uploaded = await uploadFile(`library-${id}`, file);
       if (!uploaded) { saveBtn.disabled = false; saveBtn.textContent = 'Upload'; return alert('Upload failed.'); }
 
       const { error } = await sb.from('library').insert({ id, title, artist, category, file_name: file.name, sort_order: librarySongs.length });
