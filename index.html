@@ -444,6 +444,26 @@
     .modal .form-group input:focus, .modal .form-group select:focus { border-color: var(--teal); }
     .modal .modal-actions { display: flex; gap: var(--sp-3); justify-content: flex-end; margin-top: var(--sp-4); }
 
+    /* Queue */
+    .queue-section { margin-top: var(--sp-4); }
+    .queue-list { display: flex; flex-direction: column; gap: var(--sp-1); }
+    .queue-item {
+      display: flex; align-items: center; gap: var(--sp-3); padding: 8px var(--sp-3);
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r-2);
+      cursor: grab; touch-action: none; user-select: none;
+      transition: border-color var(--duration-fast) var(--ease-in-out);
+    }
+    .queue-item.current { border-color: var(--teal); box-shadow: var(--glow-teal); }
+    .queue-item.dragging { opacity: 0.5; border-color: var(--purple); }
+    .queue-item .queue-drag { color: var(--text-dim); flex-shrink: 0; }
+    .queue-item .queue-name { flex: 1; font-size: var(--text-sm); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .queue-item .queue-pos { font-size: var(--text-xs); color: var(--text-dim); flex-shrink: 0; min-width: 20px; text-align: center; }
+    .queue-item .queue-remove {
+      background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 4px;
+      transition: color var(--duration-fast) var(--ease-in-out);
+    }
+    .queue-item .queue-remove:hover { color: var(--danger); }
+
     /* Category Chips */
     .category-chips { display: flex; flex-wrap: wrap; gap: 6px; }
     .chip {
@@ -767,6 +787,14 @@
       <div id="library-list" class="library-list"></div>
       <div id="library-empty" class="empty-state" style="margin-top:20px;">
         No songs in the library yet. Add songs for between innings, warmups, and more.
+      </div>
+
+      <div id="queue-section" class="queue-section" style="display:none;">
+        <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Up Next</span>
+          <button class="small-btn danger" id="clear-queue-btn" style="font-size:var(--text-xs);">Clear</button>
+        </div>
+        <div id="queue-list" class="queue-list"></div>
       </div>
     </div>
   </div>
@@ -1203,6 +1231,87 @@
 
     librarySearchInput.addEventListener('input', () => renderLibrary(librarySearchInput.value));
 
+    // ---- Queue UI ----
+    const queueSection = document.getElementById('queue-section');
+    const queueListEl = document.getElementById('queue-list');
+
+    document.getElementById('clear-queue-btn').addEventListener('click', () => {
+      if (crossfadeTimer) { clearTimeout(crossfadeTimer); crossfadeTimer = null; }
+      if (queueIndex >= 0 && queueIndex < playQueue.length) {
+        playQueue[queueIndex].audio.pause();
+        playQueue[queueIndex].audio.currentTime = 0;
+      }
+      clearButtonPlaying();
+      playQueue = []; queueIndex = -1; isPlaying = false;
+      updateNowPlaying();
+      renderQueue();
+    });
+
+    function renderQueue() {
+      queueSection.style.display = playQueue.length ? '' : 'none';
+      queueListEl.innerHTML = '';
+      playQueue.forEach((item, i) => {
+        const div = document.createElement('div');
+        div.className = 'queue-item' + (i === queueIndex ? ' current' : '');
+        div.draggable = true;
+        div.dataset.idx = i;
+        div.innerHTML = `
+          <span class="queue-drag"><i data-lucide="grip-vertical" style="width:14px;height:14px;"></i></span>
+          <span class="queue-pos">${i + 1}</span>
+          <span class="queue-name">${item.name || 'Unknown'}</span>
+          <button class="queue-remove" title="Remove"><i data-lucide="x" style="width:12px;height:12px;"></i></button>
+        `;
+        div.querySelector('.queue-remove').addEventListener('click', () => {
+          removeFromQueue(i);
+        });
+        // Drag events
+        div.addEventListener('dragstart', e => {
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', i);
+          div.classList.add('dragging');
+        });
+        div.addEventListener('dragend', () => div.classList.remove('dragging'));
+        div.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; });
+        div.addEventListener('drop', e => {
+          e.preventDefault();
+          const from = parseInt(e.dataTransfer.getData('text/plain'));
+          const to = parseInt(div.dataset.idx);
+          if (from !== to) reorderQueue(from, to);
+        });
+        queueListEl.appendChild(div);
+      });
+      lucide.createIcons();
+    }
+
+    function removeFromQueue(idx) {
+      if (idx === queueIndex) {
+        // Removing currently playing — stop it and advance
+        playQueue[idx].audio.pause();
+        playQueue[idx].audio.currentTime = 0;
+        playQueue.splice(idx, 1);
+        if (queueIndex >= playQueue.length) {
+          clearButtonPlaying(); isPlaying = false; queueIndex = -1;
+          updateNowPlaying();
+        } else {
+          playCurrentInQueue();
+        }
+      } else {
+        playQueue.splice(idx, 1);
+        if (idx < queueIndex) queueIndex--;
+      }
+      renderQueue();
+    }
+
+    function reorderQueue(from, to) {
+      const [item] = playQueue.splice(from, 1);
+      playQueue.splice(to, 0, item);
+      // Update queueIndex to follow the currently playing song
+      if (from === queueIndex) queueIndex = to;
+      else if (from < queueIndex && to >= queueIndex) queueIndex--;
+      else if (from > queueIndex && to <= queueIndex) queueIndex++;
+      renderQueue();
+    }
+
     async function loadLibrary() {
       const { data, error } = await sb.from('library').select('*').order('sort_order');
       if (error) { console.error('Load library error:', error); return; }
@@ -1592,18 +1701,15 @@
     function addToLibraryQueue(song) {
       const item = { audio: song.audio, name: song.title };
       if (!isPlaying || playQueue.length === 0) {
-        // Nothing playing — start it
         playFromQueue([item], { crossfade: true });
       } else {
-        // Append to current queue
         playQueue.push(item);
         crossfadeEnabled = true;
-        // If this is the only upcoming song, schedule crossfade for current track
         if (playQueue.length - 1 === queueIndex + 1) {
-          const currentAudio = playQueue[queueIndex].audio;
-          scheduleCrossfade(currentAudio);
+          scheduleCrossfade(playQueue[queueIndex].audio);
         }
       }
+      renderQueue();
     }
 
     function playFromQueue(queue, { crossfade = false } = {}) {
@@ -1620,6 +1726,7 @@
       isPlaying = false;
       crossfadeEnabled = crossfade;
       playCurrentInQueue();
+      renderQueue();
     }
 
     function playCurrentInQueue() {
@@ -1834,8 +1941,9 @@
     document.getElementById('stop-btn').addEventListener('click', () => stopAll());
 
     function updateNowPlaying() {
+      renderQueue();
       if (queueIndex >= 0 && queueIndex < playQueue.length) {
-        trackName.textContent = playQueue[queueIndex].label;
+        trackName.textContent = playQueue[queueIndex].label || playQueue[queueIndex].name;
         trackStatus.textContent = isPlaying ? 'Now playing' : 'Paused';
         playPauseBtn.innerHTML = isPlaying
           ? '<i data-lucide="pause" style="width:20px;height:20px;"></i>'
