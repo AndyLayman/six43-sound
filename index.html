@@ -1148,7 +1148,7 @@
     document.getElementById('play-all-btn').addEventListener('click', () => {
       if (librarySongs.length === 0) return;
       const queue = librarySongs.map(s => ({ audio: s.audio, name: s.title }));
-      playFromQueue(queue, { crossfade: true });
+      playFromQueue(queue);
     });
 
     document.getElementById('add-song-btn').addEventListener('click', () => {
@@ -1225,7 +1225,7 @@
           addToLibraryQueue(song);
         });
         div.querySelector('.play-song').addEventListener('click', () => {
-          playFromQueue([{ audio: song.audio, name: song.title }], { crossfade: true });
+          playFromQueue([{ audio: song.audio, name: song.title }]);
         });
         div.querySelector('.delete-song').addEventListener('click', async () => {
           if (confirm(`Delete "${song.title}"?`)) await deleteLibrarySong(song.id);
@@ -1242,7 +1242,6 @@
     const queueListEl = document.getElementById('queue-list');
 
     document.getElementById('clear-queue-btn').addEventListener('click', () => {
-      if (crossfadeTimer) { clearTimeout(crossfadeTimer); crossfadeTimer = null; }
       if (queueIndex >= 0 && queueIndex < playQueue.length) {
         playQueue[queueIndex].audio.pause();
         playQueue[queueIndex].audio.currentTime = 0;
@@ -1700,27 +1699,19 @@
     }
 
     // ---- Playback Engine ----
-    let crossfadeEnabled = false;
-    const CROSSFADE_DURATION = 2; // seconds
-    let crossfadeTimer = null;
 
     function addToLibraryQueue(song) {
       const item = { audio: song.audio, name: song.title };
       if (!isPlaying || playQueue.length === 0) {
-        playFromQueue([item], { crossfade: true });
+        playFromQueue([item]);
       } else {
         playQueue.push(item);
-        crossfadeEnabled = true;
-        if (playQueue.length - 1 === queueIndex + 1) {
-          scheduleCrossfade(playQueue[queueIndex].audio);
-        }
       }
       renderQueue();
     }
 
-    function playFromQueue(queue, { crossfade = false } = {}) {
-      if (crossfadeTimer) { clearTimeout(crossfadeTimer); crossfadeTimer = null; }
-      // Fully stop and replace when starting something new
+    function playFromQueue(queue) {
+      // Stop current audio
       if (queueIndex >= 0 && queueIndex < playQueue.length) {
         const audio = playQueue[queueIndex].audio;
         audio.pause();
@@ -1730,47 +1721,30 @@
       playQueue = queue;
       queueIndex = 0;
       isPlaying = false;
-      crossfadeEnabled = crossfade;
       playCurrentInQueue();
       renderQueue();
     }
 
     function playCurrentInQueue() {
-      if (crossfadeTimer) { clearTimeout(crossfadeTimer); crossfadeTimer = null; }
       if (queueIndex < 0 || queueIndex >= playQueue.length) {
         isPlaying = false;
         updateNowPlaying();
         return;
       }
       const item = playQueue[queueIndex];
-      // Stop any previously playing audio (unless crossfading — outgoing is handled separately)
+      // Stop any other playing audio in the queue
       playQueue.forEach((q, i) => {
         if (i !== queueIndex && !q.audio.paused) {
           q.audio.pause();
           q.audio.currentTime = 0;
         }
       });
-      // Reload audio if it errored or never loaded
       if (item.audio.error || item.audio.readyState === 0) {
         item.audio.load();
       }
       item.audio.currentTime = 0;
-      // Ensure audio can play through Web Audio if previously connected
-      if (audioGains.has(item.audio)) {
-        ensureAudioCtx();
-        const gain = audioGains.get(item.audio);
-        gain.gain.cancelScheduledValues(audioCtx.currentTime);
-        gain.gain.setValueAtTime(1, audioCtx.currentTime);
-      }
-      if (crossfadeEnabled) {
-        ensureAudioCtx();
-        fadeIn(item.audio, CROSSFADE_DURATION);
-      }
-      item.audio.play().then(() => {
-        console.log('Playing:', item.label || item.name, 'readyState:', item.audio.readyState);
-      }).catch(e => {
-        console.warn('Play failed:', e, 'readyState:', item.audio.readyState, 'error:', item.audio.error);
-        // Retry after reload
+      item.audio.play().catch(e => {
+        console.warn('Play failed, retrying:', e);
         item.audio.load();
         setTimeout(() => item.audio.play().catch(e2 => console.error('Retry failed:', e2)), 200);
       });
@@ -1788,140 +1762,18 @@
           updateNowPlaying();
         }
       };
-
-      // Schedule crossfade before song ends
-      if (crossfadeEnabled && queueIndex < playQueue.length - 1) {
-        scheduleCrossfade(item.audio);
-      }
-    }
-
-    function scheduleCrossfade(currentAudio) {
-      const check = () => {
-        if (!isPlaying || currentAudio.paused) return;
-        const remaining = currentAudio.duration - currentAudio.currentTime;
-        if (isNaN(remaining)) { crossfadeTimer = setTimeout(check, 500); return; }
-        if (remaining <= CROSSFADE_DURATION + 0.1) {
-          startCrossfade(currentAudio);
-        } else {
-          crossfadeTimer = setTimeout(check, Math.max((remaining - CROSSFADE_DURATION - 0.5) * 1000, 200));
-        }
-      };
-      crossfadeTimer = setTimeout(check, 500);
-    }
-
-    function startCrossfade(outgoingAudio) {
-      outgoingAudio.onended = null; // prevent normal queue advance
-      // Fade out current
-      const outGain = getGainNode(outgoingAudio);
-      outGain.gain.cancelScheduledValues(audioCtx.currentTime);
-      outGain.gain.setValueAtTime(outGain.gain.value || 1, audioCtx.currentTime);
-      outGain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + CROSSFADE_DURATION);
-      setTimeout(() => { outgoingAudio.pause(); outgoingAudio.currentTime = 0; }, CROSSFADE_DURATION * 1000);
-
-      // Advance and fade in next
-      queueIndex++;
-      if (queueIndex < playQueue.length) {
-        const next = playQueue[queueIndex];
-        next.audio.currentTime = 0;
-        fadeIn(next.audio, CROSSFADE_DURATION);
-        next.audio.play();
-        setButtonPlaying(next.btn || null);
-        updateNowPlaying();
-
-        next.audio.onended = () => {
-          queueIndex++;
-          if (queueIndex < playQueue.length) {
-            playCurrentInQueue();
-          } else {
-            clearButtonPlaying();
-            isPlaying = false;
-            updateNowPlaying();
-          }
-        };
-
-        if (queueIndex < playQueue.length - 1) {
-          scheduleCrossfade(next.audio);
-        }
-      } else {
-        clearButtonPlaying();
-        isPlaying = false;
-        updateNowPlaying();
-      }
     }
 
     function stopAll(clearQueue) {
-      if (crossfadeTimer) { clearTimeout(crossfadeTimer); crossfadeTimer = null; }
       clearButtonPlaying();
       if (queueIndex >= 0 && queueIndex < playQueue.length) {
         const audio = playQueue[queueIndex].audio;
-        fadeOut(audio, () => {
-          isPlaying = false;
-          if (clearQueue) { playQueue = []; queueIndex = -1; }
-          updateNowPlaying();
-        });
-      } else {
-        isPlaying = false;
-        if (clearQueue) { playQueue = []; queueIndex = -1; }
-        updateNowPlaying();
-      }
-    }
-
-    // Web Audio fade — per-audio gain nodes for crossfade support
-    let audioCtx;
-    const audioGains = new WeakMap(); // audio -> GainNode
-
-    function ensureAudioCtx() {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-    }
-
-    function getGainNode(audio) {
-      ensureAudioCtx();
-      if (!audioGains.has(audio)) {
-        const gain = audioCtx.createGain();
-        gain.connect(audioCtx.destination);
-        const src = audioCtx.createMediaElementSource(audio);
-        src.connect(gain);
-        audioGains.set(audio, gain);
-      }
-      return audioGains.get(audio);
-    }
-
-    function fadeOut(audio, callback, duration = 2000) {
-      try {
-        const gain = getGainNode(audio);
-        gain.gain.cancelScheduledValues(audioCtx.currentTime);
-        gain.gain.setValueAtTime(gain.gain.value || 1, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration / 1000);
-        setTimeout(() => {
-          audio.pause();
-          // Reset gain after pause so this audio is ready to play at full volume next time
-          setTimeout(() => {
-            gain.gain.cancelScheduledValues(audioCtx.currentTime);
-            gain.gain.setValueAtTime(1, audioCtx.currentTime);
-          }, 100);
-          if (callback) callback();
-        }, duration);
-      } catch (e) {
-        console.warn('Fade failed, stopping:', e);
         audio.pause();
         audio.currentTime = 0;
-        if (callback) callback();
       }
-    }
-
-    function fadeIn(audio, duration = 2) {
-      try {
-        const gain = getGainNode(audio);
-        gain.gain.cancelScheduledValues(audioCtx.currentTime);
-        if (duration <= 0.1) {
-          // No fade needed — just ensure full volume
-          gain.gain.setValueAtTime(1, audioCtx.currentTime);
-        } else {
-          gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
-          gain.gain.linearRampToValueAtTime(1, audioCtx.currentTime + duration);
-        }
-      } catch(e) {}
+      isPlaying = false;
+      if (clearQueue) { playQueue = []; queueIndex = -1; }
+      updateNowPlaying();
     }
 
     function togglePlayPause() {
@@ -1930,14 +1782,9 @@
       const item = playQueue[queueIndex];
       if (isPlaying) {
         clearButtonPlaying();
-        fadeOut(item.audio, () => {
-          isPlaying = false;
-          updateNowPlaying();
-        });
+        item.audio.pause();
         isPlaying = false;
       } else {
-        // Resume with gain ramp to avoid blip
-        fadeIn(item.audio, 0.05);
         item.audio.play();
         isPlaying = true;
         setButtonPlaying(item.btn || null);
