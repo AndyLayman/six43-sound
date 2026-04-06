@@ -885,17 +885,23 @@
     // Staging visual indicators
     if (CURRENT_ENV === 'staging') {
       document.title = '[STAGE] Soundboard';
-      // Swap favicon to an orange-tinted version via canvas
-      const canvas = document.createElement('canvas');
-      canvas.width = 64; canvas.height = 64;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#FF9800';
-      ctx.beginPath(); ctx.arc(32, 32, 30, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#000';
-      ctx.font = 'bold 28px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('S', 32, 33);
-      const link = document.querySelector('link[rel="icon"]');
-      link.href = canvas.toDataURL('image/png');
+      // Swap favicon to grayscale
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const c = document.createElement('canvas');
+        c.width = img.width; c.height = img.height;
+        const ctx = c.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        const id = ctx.getImageData(0, 0, c.width, c.height);
+        for (let i = 0; i < id.data.length; i += 4) {
+          const g = id.data[i] * 0.299 + id.data[i+1] * 0.587 + id.data[i+2] * 0.114;
+          id.data[i] = id.data[i+1] = id.data[i+2] = g;
+        }
+        ctx.putImageData(id, 0, 0);
+        document.querySelector('link[rel="icon"]').href = c.toDataURL('image/png');
+      };
+      img.src = 'favicon.png';
     }
 
     const STORAGE_BUCKET = 'media';
