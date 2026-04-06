@@ -1261,16 +1261,18 @@
     });
 
     function renderQueue() {
-      queueSection.style.display = playQueue.length ? '' : 'none';
+      const upcoming = playQueue.filter((_, i) => i > queueIndex);
+      queueSection.style.display = upcoming.length ? '' : 'none';
       queueListEl.innerHTML = '';
       playQueue.forEach((item, i) => {
+        if (i <= queueIndex) return;
         const div = document.createElement('div');
-        div.className = 'queue-item' + (i === queueIndex ? ' current' : '');
+        div.className = 'queue-item';
         div.draggable = true;
         div.dataset.idx = i;
         div.innerHTML = `
           <span class="queue-drag"><i data-lucide="grip-vertical" style="width:14px;height:14px;"></i></span>
-          <span class="queue-pos">${i + 1}</span>
+          <span class="queue-pos">${i - queueIndex}</span>
           <span class="queue-name">${item.name || 'Unknown'}</span>
           <button class="queue-remove" title="Remove"><i data-lucide="x" style="width:12px;height:12px;"></i></button>
         `;
