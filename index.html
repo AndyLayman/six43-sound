@@ -1738,14 +1738,31 @@
           q.audio.currentTime = 0;
         }
       });
-      if (item.audio.error || item.audio.readyState === 0) {
+      if (item.audio.readyState >= 2) {
+        item.audio.currentTime = 0;
+        item.audio.play().catch(e => {
+          trackStatus.textContent = `ERR: ${e.message}`;
+        });
+      } else {
+        // Audio not loaded yet — wait for it
+        trackStatus.textContent = 'Loading audio...';
         item.audio.load();
+        const onReady = () => {
+          item.audio.removeEventListener('canplay', onReady);
+          item.audio.removeEventListener('error', onErr);
+          item.audio.currentTime = 0;
+          item.audio.play().catch(e => {
+            trackStatus.textContent = `ERR: ${e.message}`;
+          });
+        };
+        const onErr = () => {
+          item.audio.removeEventListener('canplay', onReady);
+          item.audio.removeEventListener('error', onErr);
+          trackStatus.textContent = `Load failed: ${item.audio.error?.message || 'unknown'} | src:${item.audio.src.slice(-40)}`;
+        };
+        item.audio.addEventListener('canplay', onReady);
+        item.audio.addEventListener('error', onErr);
       }
-      item.audio.currentTime = 0;
-      item.audio.play().catch(e => {
-        console.warn('Play failed:', e);
-        trackStatus.textContent = `ERR: ${e.message} | ready:${item.audio.readyState}`;
-      });
       isPlaying = true;
       setButtonPlaying(item.btn || null);
       updateNowPlaying();
