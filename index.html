@@ -1718,7 +1718,7 @@
       renderQueue();
     }
 
-    function fadeOut(audio, cb) {
+    function fadeOut(audio, cb, { resetTime = true } = {}) {
       if (fadeInterval) clearInterval(fadeInterval);
       const steps = 20;
       const stepTime = FADE_MS / steps;
@@ -1731,7 +1731,7 @@
           fadeInterval = null;
           audio.volume = 0;
           audio.pause();
-          audio.currentTime = 0;
+          if (resetTime) audio.currentTime = 0;
           audio.volume = 1;
           if (cb) cb();
         } else {
@@ -1883,7 +1883,7 @@
         fadeOut(item.audio, () => {
           isPlaying = false;
           updateNowPlaying();
-        });
+        }, { resetTime: false });
         isPlaying = false;
       } else {
         fadeIn(item.audio, 0.05);
