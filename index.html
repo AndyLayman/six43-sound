@@ -880,7 +880,7 @@
     }
 
     function makeAudio(url) {
-      const a = new Audio(url);
+      const a = new Audio(url + (url.includes('?') ? '&' : '?') + '_=' + Date.now());
       return a;
     }
 
