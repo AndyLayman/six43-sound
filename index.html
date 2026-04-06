@@ -347,10 +347,10 @@
     /* --- Play Page --- */
     #board {
       display: flex; gap: var(--sp-3);
-      overflow-x: auto; overflow-y: hidden;
+      overflow-x: auto; overflow-y: visible;
       scroll-snap-type: x proximity;
       -webkit-overflow-scrolling: touch;
-      padding-bottom: var(--sp-2);
+      padding: var(--sp-2) 0;
       scrollbar-width: thin;
       scrollbar-color: var(--gray-700) transparent;
     }
