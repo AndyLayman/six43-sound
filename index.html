@@ -1880,9 +1880,13 @@
       const item = playQueue[queueIndex];
       if (isPlaying) {
         clearButtonPlaying();
-        item.audio.pause();
+        fadeOut(item.audio, () => {
+          isPlaying = false;
+          updateNowPlaying();
+        });
         isPlaying = false;
       } else {
+        fadeIn(item.audio, 0.05);
         item.audio.play();
         isPlaying = true;
         setButtonPlaying(item.btn || null);
