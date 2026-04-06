@@ -746,7 +746,8 @@
   <div id="roster-page" class="page">
     <div class="section-title">Add Player</div>
     <div class="add-player-row">
-      <input type="text" id="player-name-input" placeholder="Player name">
+      <input type="text" id="player-first-name-input" placeholder="First name">
+      <input type="text" id="player-last-name-input" placeholder="Last name">
       <input type="text" id="player-number-input" placeholder="#" style="max-width:60px;text-align:center;">
       <button id="add-player-btn">Add Player</button>
     </div>
@@ -973,7 +974,8 @@
     // ---- Players persistence ----
     async function savePlayerToDB(p) {
       const payload = {
-        id: p.id, name: p.name, number: p.number, active: p.active !== false,
+        id: p.id, name: (p.firstName + ' ' + p.lastName).trim(), first_name: p.firstName || '', last_name: p.lastName || '',
+        number: p.number, active: p.active !== false,
         photo_file: p.photoFile, intro_file: p.introFile,
         song_file: p.songFile, combo_file: p.comboFile,
         sort_order: p.sortOrder || 0
@@ -998,7 +1000,8 @@
         players[i].sortOrder = i;
         const pl = players[i];
         const payload = {
-          id: pl.id, name: pl.name, number: pl.number, active: pl.active !== false,
+          id: pl.id, name: (pl.firstName + ' ' + pl.lastName).trim(), first_name: pl.firstName || '', last_name: pl.lastName || '',
+          number: pl.number, active: pl.active !== false,
           photo_file: pl.photoFile, intro_file: pl.introFile,
           song_file: pl.songFile, combo_file: pl.comboFile,
           sort_order: i
@@ -1029,7 +1032,7 @@
       if (playerRows) {
         for (const p of playerRows) {
           const player = {
-            id: p.id, name: p.name, number: p.number,
+            id: p.id, firstName: p.first_name || '', lastName: p.last_name || '', name: ((p.first_name || '') + ' ' + (p.last_name || '')).trim() || p.name, number: p.number,
             active: p.active !== false,
             photoFile: p.photo_file || null, photoUrl: null,
             introFile: p.intro_file || null, introUrl: null, introAudio: null,
@@ -1394,27 +1397,31 @@
 
     // ---- Roster ----
     document.getElementById('add-player-btn').addEventListener('click', addPlayer);
-    document.getElementById('player-name-input').addEventListener('keydown', e => { if (e.key === 'Enter') addPlayer(); });
+    document.getElementById('player-first-name-input').addEventListener('keydown', e => { if (e.key === 'Enter') addPlayer(); });
+    document.getElementById('player-last-name-input').addEventListener('keydown', e => { if (e.key === 'Enter') addPlayer(); });
 
     async function addPlayer() {
-      const nameInput = document.getElementById('player-name-input');
+      const firstInput = document.getElementById('player-first-name-input');
+      const lastInput = document.getElementById('player-last-name-input');
       const numInput = document.getElementById('player-number-input');
-      const name = nameInput.value.trim();
-      if (!name) return;
+      const firstName = firstInput.value.trim();
+      const lastName = lastInput.value.trim();
+      if (!firstName && !lastName) return;
+      const name = (firstName + ' ' + lastName).trim();
       const { data, error } = await sb.from('players').insert({
-        name, number: numInput.value.trim() || '?', sort_order: players.length
+        name, first_name: firstName, last_name: lastName, number: numInput.value.trim() || '?', sort_order: players.length
       }).select().single();
       if (error || !data) { console.error('Insert player error:', error); return; }
       const player = {
-        id: data.id, name: data.name, number: data.number,
+        id: data.id, firstName: data.first_name, lastName: data.last_name, name, number: data.number,
         photoFile: null, photoUrl: null,
         introFile: null, introUrl: null, introAudio: null,
         songFile: null, songUrl: null, songAudio: null,
         comboFile: null, comboUrl: null, comboAudio: null
       };
       players.push(player);
-      nameInput.value = ''; numInput.value = '';
-      nameInput.focus();
+      firstInput.value = ''; lastInput.value = ''; numInput.value = '';
+      firstInput.focus();
       renderRoster();
     }
 
@@ -1431,7 +1438,7 @@
             <span class="drag-handle"><i data-lucide="grip-vertical" style="width:16px;height:16px;"></i></span>
             ${p.photoUrl ? `<img class="player-photo" src="${p.photoUrl}" alt="${esc(p.name)}">` : '<div class="player-photo-placeholder"><i data-lucide="camera" style="width:16px;height:16px;"></i></div>'}
             <input type="text" class="player-number-input" value="${esc(p.number)}" placeholder="#" title="Player number">
-            <div class="player-name-display">${esc(p.name)}</div>
+            <div class="player-name-display">${esc(p.firstName)} <strong>${esc(p.lastName)}</strong></div>
             <button class="bench-toggle" title="${p.active !== false ? 'Bench player' : 'Activate player'}">
               <i data-lucide="${p.active !== false ? 'user-check' : 'user-x'}" style="width:14px;height:14px;"></i>
               ${p.active !== false ? 'Active' : 'Benched'}
@@ -1647,7 +1654,7 @@
           <div class="lc-name">
             ${p.photoUrl ? `<img class="lc-photo" src="${p.photoUrl}" alt="${esc(p.name)}">` : '<div class="lc-photo-placeholder"><i data-lucide="camera" style="width:16px;height:16px;"></i></div>'}
             <div class="player-number">${esc(p.number)}</div>
-            ${esc(p.name)}
+            ${esc(p.firstName)} <strong>${esc(p.lastName)}</strong>
           </div>
           <div class="lc-buttons">
             <button class="lc-btn lc-btn-sq intro-btn" ${!hasIntro ? 'disabled' : ''} title="Intro"><i data-lucide="mic" style="width:16px;height:16px;"></i></button>
