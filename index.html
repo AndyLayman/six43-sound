@@ -1743,12 +1743,11 @@
       }
       item.audio.currentTime = 0;
       item.audio.play().catch(e => {
-        console.warn('Play failed, retrying:', e);
-        trackStatus.textContent = 'Error: ' + e.message;
+        console.warn('Play failed:', e);
+        trackStatus.textContent = `ERR: ${e.message} | ready:${item.audio.readyState} | src:${item.audio.src.slice(-30)}`;
         item.audio.load();
         setTimeout(() => item.audio.play().catch(e2 => {
-          console.error('Retry failed:', e2);
-          trackStatus.textContent = 'Retry error: ' + e2.message;
+          trackStatus.textContent = `RETRY ERR: ${e2.message} | ready:${item.audio.readyState}`;
         }), 200);
       });
       isPlaying = true;
