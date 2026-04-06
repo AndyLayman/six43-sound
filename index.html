@@ -875,7 +875,9 @@
       }
     };
     // Switch environment: 'staging' or 'production'
-    const CURRENT_ENV = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'staging' : 'production';
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const isVercelPreview = window.location.hostname.endsWith('.vercel.app') && window.location.hostname !== 'sound-board-azure.vercel.app';
+    const CURRENT_ENV = (isLocal || isVercelPreview) ? 'staging' : 'production';
     const SUPABASE_URL = ENV[CURRENT_ENV].url;
     const SUPABASE_KEY = ENV[CURRENT_ENV].key;
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
