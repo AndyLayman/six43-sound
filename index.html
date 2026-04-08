@@ -1936,6 +1936,7 @@
           updateNowPlaying();
         }
       };
+      updateMediaSession();
     }
 
     function stopAll(clearQueue) {
@@ -2042,10 +2043,54 @@
           progressBar.style.width = (audio.currentTime / audio.duration * 100) + '%';
           timeDisplay.textContent = fmtTime(audio.currentTime) + ' / ' + fmtTime(audio.duration);
         }
+        // Fallback auto-advance: if track ended but onended didn't fire (iOS bg suspension)
+        if (audio.ended && isPlaying) {
+          queueIndex++;
+          if (queueIndex < playQueue.length) {
+            playCurrentInQueue();
+          } else {
+            clearButtonPlaying();
+            isPlaying = false;
+            updateNowPlaying();
+          }
+        }
       } else {
         timeDisplay.textContent = '0:00 / 0:00';
       }
-    }, 100);
+    }, 250);
+
+    // When page wakes from background (screen on), catch up on ended tracks
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && isPlaying && queueIndex >= 0 && queueIndex < playQueue.length) {
+        const audio = playQueue[queueIndex].audio;
+        if (audio.ended) {
+          queueIndex++;
+          if (queueIndex < playQueue.length) {
+            playCurrentInQueue();
+          } else {
+            clearButtonPlaying();
+            isPlaying = false;
+            updateNowPlaying();
+          }
+        }
+      }
+    });
+
+    // Media Session API — tells iOS this is a media app, reduces JS suspension
+    function updateMediaSession() {
+      if (!('mediaSession' in navigator)) return;
+      if (queueIndex >= 0 && queueIndex < playQueue.length) {
+        const item = playQueue[queueIndex];
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: item.label || item.name || 'Walk-Up Song',
+          artist: 'Baseball SoundBoard',
+        });
+      }
+      navigator.mediaSession.setActionHandler('play', togglePlayPause);
+      navigator.mediaSession.setActionHandler('pause', togglePlayPause);
+      navigator.mediaSession.setActionHandler('nexttrack', playQueue.length > 1 ? skipNext : null);
+      navigator.mediaSession.setActionHandler('previoustrack', playQueue.length > 1 ? skipPrev : null);
+    }
 
     // Utility
     function esc(str) {
