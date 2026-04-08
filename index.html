@@ -2057,10 +2057,10 @@
     // ---- Preload ----
     function preloadAudio(audio) {
       return new Promise(resolve => {
-        if (audio.readyState >= 4) { resolve(); return; }
+        if (audio.readyState >= 2) { resolve(); return; }
         audio.preload = 'auto';
-        const timeout = setTimeout(() => resolve(), 8000);
-        audio.addEventListener('canplaythrough', () => { clearTimeout(timeout); resolve(); }, { once: true });
+        const timeout = setTimeout(() => resolve(), 5000);
+        audio.addEventListener('canplay', () => { clearTimeout(timeout); resolve(); }, { once: true });
         audio.addEventListener('error', () => { clearTimeout(timeout); resolve(); }, { once: true });
         audio.load();
       });
@@ -2080,12 +2080,16 @@
       const total = allAudio.length;
       if (total === 0) return;
       progressEl.textContent = `0 / ${total}`;
-      await Promise.all(allAudio.map(a =>
-        preloadAudio(a).then(() => {
-          loaded++;
-          progressEl.textContent = `${loaded} / ${total}`;
-        })
-      ));
+      // Race all preloads against a 15s global timeout so the app always loads
+      await Promise.race([
+        Promise.all(allAudio.map(a =>
+          preloadAudio(a).then(() => {
+            loaded++;
+            progressEl.textContent = `${loaded} / ${total}`;
+          })
+        )),
+        new Promise(resolve => setTimeout(resolve, 15000))
+      ]);
     }
 
     // ---- Boot ----
