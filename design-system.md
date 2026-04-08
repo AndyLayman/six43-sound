@@ -1,4 +1,4 @@
-# Design System — Baseball Soundboard
+# Design System — Baseball Apps
 
 ## Mode
 - **Dark mode only** (for now)
@@ -7,56 +7,55 @@
 
 ## Colors
 
+### Baseball Palette
+
+| Name             | Token            | Hex       | Usage                              |
+|------------------|------------------|-----------|------------------------------------|
+| Chalk            | `--chalk`        | `#F7F7F7` | Primary text, high-contrast whites |
+| Night Game       | `--night-game`   | `#111111` | Primary background, text on accent |
+| Infield Clay     | `--clay`         | `#E9D7B4` | Primary accent, active states      |
+| Wet Dirt         | `--dirt`         | `#574F3D` | Secondary accent, muted warm       |
+| Stitch Red       | `--stitch-red`   | `#B93C3C` | Error states, destructive muted    |
+| High Heat        | `--high-heat`    | `#FA4D4D` | Error accents, danger emphasis     |
+| Outfield Wall    | `--outfield`     | `#50684C` | Success states, muted              |
+| Fresh Cut Field  | `--fresh-cut`    | `#71A368` | Success accents, confirmations     |
+
+> **Red/green are reserved for success and failure states only.** Never use them as decorative accents.
+
 ### Neutrals
 
 | Token        | Hex       | Usage                          |
 |--------------|-----------|--------------------------------|
-| `--black`    | `#0A0A0A` | Primary background             |
-| `--gray-950` | `#141414` | Deep/sunken backgrounds        |
-| `--gray-900` | `#1A1A1A` | Card backgrounds               |
+| `--black`    | `#111111` | Primary background (Night Game)|
+| `--gray-950` | `#181818` | Deep/sunken backgrounds        |
+| `--gray-900` | `#1E1E1E` | Card backgrounds               |
 | `--gray-800` | `#2A2A2A` | Elevated surfaces, inputs      |
 | `--gray-700` | `#3A3A3A` | Borders, dividers              |
 | `--gray-600` | `#5A5A5A` | Muted icons, disabled states   |
 | `--gray-400` | `#8A8A8A` | Muted/secondary text           |
 | `--gray-200` | `#B0B0B0` | Subtext, labels                |
-| `--white`    | `#F7F7F7` | Primary text, high-contrast    |
-
-### Accent Primitives
-
-| Token      | Hex       |
-|------------|-----------|
-| `--teal`   | `#08DDC8` |
-| `--green`  | `#83DD68` |
-| `--purple` | `#CF59F3` |
-
-### Accent Gradient
-
-```css
---accent-gradient: conic-gradient(
-  from 180deg at 50% -18.18%,
-  #08DDC8 0deg,
-  #83DD68 128.08deg,
-  #CF59F3 264.81deg,
-  #08DDC8 360deg
-);
-```
+| `--white`    | `#F7F7F7` | Primary text (Chalk)           |
 
 ---
 
 ## Semantic Tokens
 
-| Role                 | Token          | Value                         |
-|----------------------|----------------|-------------------------------|
-| Page background      | `--bg`         | `--black` (`#0A0A0A`)         |
-| Card background      | `--bg-card`    | `--gray-900` (`#1A1A1A`)      |
-| Input background     | `--bg-input`   | `--gray-800` (`#2A2A2A`)      |
-| Primary text         | `--text`       | `--white` (`#F7F7F7`)         |
-| Secondary text       | `--text-muted` | `--gray-400` (`#8A8A8A`)      |
-| Dim text             | `--text-dim`   | `--gray-600` (`#5A5A5A`)      |
-| Border               | `--border`     | `--gray-700` (`#3A3A3A`)      |
-| Hover background     | `--hover`      | `--gray-800` (`#2A2A2A`)      |
-| Primary action       | `--action`     | Accent gradient (gradient fill) |
-| Active/playing state | `--active`     | Accent gradient + glow        |
+| Role                 | Token          | Value                             |
+|----------------------|----------------|-----------------------------------|
+| Page background      | `--bg`         | `--black` (`#111111`)             |
+| Deep background      | `--bg-deep`    | `--gray-950` (`#181818`)          |
+| Card background      | `--bg-card`    | `--gray-900` (`#1E1E1E`)         |
+| Input background     | `--bg-input`   | `--gray-800` (`#2A2A2A`)         |
+| Primary text         | `--text`       | `--white` (`#F7F7F7`)            |
+| Secondary text       | `--text-muted` | `--gray-400` (`#8A8A8A`)         |
+| Dim text             | `--text-dim`   | `--gray-600` (`#5A5A5A`)         |
+| Border               | `--border`     | `--gray-700` (`#3A3A3A`)         |
+| Hover background     | `--hover`      | `--gray-800` (`#2A2A2A`)         |
+| Primary accent       | `--accent`     | `--clay` (`#E9D7B4`)             |
+| Accent hover         | `--accent-hover`| `#D4C29F`                        |
+| Text on accent       | `--accent-on`  | `--black` (`#111111`)            |
+| Danger               | `--danger`     | `--high-heat` (`#FA4D4D`)        |
+| Success              | `--success`    | `--fresh-cut` (`#71A368`)        |
 
 ---
 
@@ -64,7 +63,6 @@
 
 - **Font:** Montserrat (Google Fonts)
 - **Weight:** 300 (Light) — used globally for now
-- **Base size:** 14px
 
 ### Type Scale
 
@@ -76,12 +74,6 @@
 | `--text-lg`  | 16px   | Section titles                |
 | `--text-xl`  | 20px   | Page headings                 |
 | `--text-2xl` | 24px   | Hero/display text             |
-
-### Google Fonts Import
-
-```css
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300&display=swap');
-```
 
 ---
 
@@ -114,16 +106,17 @@
 ## Depth & Effects
 
 ### Glow Effects
-Accent-colored glows on active/hover/playing states. No traditional box shadows.
 
 ```css
-/* Individual accent glows */
---glow-teal: 0 0 12px rgba(8, 221, 200, 0.4);
---glow-green: 0 0 12px rgba(131, 221, 104, 0.4);
---glow-purple: 0 0 12px rgba(207, 89, 243, 0.4);
+/* Warm clay glow (primary accent) */
+--glow-clay: 0 0 12px rgba(233, 215, 180, 0.3);
 
-/* Combined multi-color glow (active/playing states) */
---glow-accent: 0 0 20px rgba(8, 221, 200, 0.3), 0 0 40px rgba(207, 89, 243, 0.15);
+/* Combined warm glow (active/playing states) */
+--glow-accent: 0 0 20px rgba(233, 215, 180, 0.25), 0 0 40px rgba(87, 79, 61, 0.15);
+
+/* Status glows — use sparingly, only for status indicators */
+--glow-danger: 0 0 12px rgba(250, 77, 77, 0.4);
+--glow-success: 0 0 12px rgba(113, 163, 104, 0.4);
 ```
 
 Cards and surfaces use **background color contrast** for hierarchy — no shadows.
@@ -133,22 +126,33 @@ Cards and surfaces use **background color contrast** for hierarchy — no shadow
 ## Buttons
 
 ### Primary Action
-- **Background:** Accent gradient fill (conic-gradient)
-- **Text:** `--black` (`#0A0A0A`)
+- **Background:** Infield Clay (`#E9D7B4`)
+- **Text:** Night Game (`#111111`)
 - **Border radius:** `--r-2` (8px)
 - **Hover:** Add `--glow-accent` box-shadow
 - **Active/pressed:** Scale down slightly (`transform: scale(0.97)`)
 
 ### Secondary Action
 - **Background:** `--gray-800` (`#2A2A2A`)
-- **Text:** `--white` (`#F7F7F7`)
+- **Text:** Chalk (`#F7F7F7`)
 - **Border:** 1px solid `--gray-700`
 - **Hover:** Border brightens to `--gray-600`
 
 ### Destructive / Danger
-- **Background:** `--danger` (`#FF6161`)
-- **Text:** `--black` (`#0A0A0A`)
-- **Hover:** `box-shadow: 0 0 12px rgba(255, 97, 97, 0.4)`
+- **Background:** High Heat (`#FA4D4D`)
+- **Text:** Night Game (`#111111`)
+- **Hover:** `box-shadow: var(--glow-danger)`
+
+---
+
+## Status Colors
+
+| Token          | Hex       | Usage                          |
+|----------------|-----------|--------------------------------|
+| `--danger`     | `#FA4D4D` | Destructive actions, errors    |
+| `--stitch-red` | `#B93C3C` | Error states, muted danger     |
+| `--success`    | `#71A368` | Success, confirmations         |
+| `--outfield`   | `#50684C` | Muted success, completed       |
 
 ---
 
@@ -156,10 +160,20 @@ Cards and surfaces use **background color contrast** for hierarchy — no shadow
 
 ```css
 :root {
+  /* Baseball Palette */
+  --chalk: #F7F7F7;
+  --night-game: #111111;
+  --clay: #E9D7B4;
+  --dirt: #574F3D;
+  --stitch-red: #B93C3C;
+  --high-heat: #FA4D4D;
+  --outfield: #50684C;
+  --fresh-cut: #71A368;
+
   /* Neutrals */
-  --black: #0A0A0A;
-  --gray-950: #141414;
-  --gray-900: #1A1A1A;
+  --black: #111111;
+  --gray-950: #181818;
+  --gray-900: #1E1E1E;
   --gray-800: #2A2A2A;
   --gray-700: #3A3A3A;
   --gray-600: #5A5A5A;
@@ -167,18 +181,14 @@ Cards and surfaces use **background color contrast** for hierarchy — no shadow
   --gray-200: #B0B0B0;
   --white: #F7F7F7;
 
-  /* Accents */
-  --teal: #08DDC8;
-  --green: #83DD68;
-  --purple: #CF59F3;
-  --accent-gradient: conic-gradient(
-    from 180deg at 50% -18.18%,
-    #08DDC8 0deg, #83DD68 128.08deg,
-    #CF59F3 264.81deg, #08DDC8 360deg
-  );
+  /* Legacy aliases (map old names → new palette) */
+  --teal: var(--clay);
+  --green: var(--fresh-cut);
+  --purple: var(--dirt);
 
   /* Semantic */
   --bg: var(--black);
+  --bg-deep: var(--gray-950);
   --bg-card: var(--gray-900);
   --bg-input: var(--gray-800);
   --text: var(--white);
@@ -186,6 +196,13 @@ Cards and surfaces use **background color contrast** for hierarchy — no shadow
   --text-dim: var(--gray-600);
   --border: var(--gray-700);
   --hover: var(--gray-800);
+  --accent: var(--clay);
+  --accent-hover: #D4C29F;
+  --accent-on: var(--black);
+
+  /* Status */
+  --danger: var(--high-heat);
+  --success: var(--fresh-cut);
 
   /* Spacing (8px base) */
   --sp-1: 4px;
@@ -214,10 +231,24 @@ Cards and surfaces use **background color contrast** for hierarchy — no shadow
   --font-weight: 300;
 
   /* Glows */
-  --glow-teal: 0 0 12px rgba(8, 221, 200, 0.4);
-  --glow-green: 0 0 12px rgba(131, 221, 104, 0.4);
-  --glow-purple: 0 0 12px rgba(207, 89, 243, 0.4);
-  --glow-accent: 0 0 20px rgba(8, 221, 200, 0.3), 0 0 40px rgba(207, 89, 243, 0.15);
+  --glow-clay: 0 0 12px rgba(233, 215, 180, 0.3);
+  --glow-accent: 0 0 20px rgba(233, 215, 180, 0.25), 0 0 40px rgba(87, 79, 61, 0.15);
+  --glow-danger: 0 0 12px rgba(250, 77, 77, 0.4);
+  --glow-success: 0 0 12px rgba(113, 163, 104, 0.4);
+
+  /* Legacy glow aliases */
+  --glow-teal: var(--glow-clay);
+  --glow-green: var(--glow-success);
+  --glow-purple: 0 0 12px rgba(87, 79, 61, 0.3);
+
+  /* Motion */
+  --duration-fast: 120ms;
+  --duration-base: 250ms;
+  --duration-slow: 500ms;
+  --duration-xslow: 800ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 ```
 
@@ -225,7 +256,7 @@ Cards and surfaces use **background color contrast** for hierarchy — no shadow
 
 ## Icons
 
-- **Library:** Lucide (CDN)
+- **Library:** Iconoir (CDN) / Lucide
 - **Default size:** 16px (small), 20px (medium), 24px (large)
 - **Stroke:** Default (2px)
 - **Color:** Inherits from parent `color`
@@ -259,24 +290,21 @@ The app should feel **dynamic and alive** — smooth transitions, playful micro-
 |-----------------------|---------------|----------------------------------------------------------|
 | Buttons               | Hover         | Scale up 1.03, glow fades in                             |
 | Buttons               | Press         | Scale down 0.97, glow intensifies                        |
-| Sound buttons         | Playing       | Pulse glow + waveform animation                          |
+| Sound buttons         | Playing       | Pulse glow + equalizer animation                         |
 | Cards                 | Page load     | Fade up + stagger (each card 50ms delay)                 |
-| Page transitions      | Tab switch    | Crossfade with slight slide (outgoing left, incoming right) |
-| Nav tabs              | Active        | Gradient underline slides to active tab                  |
+| Page transitions      | Tab switch    | Crossfade with slight slide                              |
+| Nav tabs              | Active        | Clay underline slides to active tab                      |
 | Toggle/bench          | State change  | Smooth opacity + icon swap with rotation                 |
 | Upload                | File added    | Card slides in from bottom with spring easing            |
 | Remove                | Delete        | Card collapses height + fades out                        |
 | Now playing bar       | Song starts   | Slides up from bottom                                   |
-| Progress bar          | Playing       | Gradient fill animates along the bar                     |
-| Loading spinner       | Loading       | Conic gradient rotation                                  |
-| Drag & drop           | Dragging      | Card lifts (scale 1.02) + shadow/glow appears            |
+| Progress bar          | Playing       | Clay-to-dirt gradient fill                               |
+| Drag & drop           | Dragging      | Card lifts (scale 1.02) + glow appears                   |
 | Player photo          | Hover         | Subtle scale 1.05                                        |
-| Theme elements        | Accent glow   | Slow ambient pulse on active elements                    |
 
 ### Stagger Pattern for Lists
 
 ```css
-/* Each child enters with increasing delay */
 .stagger-enter > * {
   opacity: 0;
   transform: translateY(12px);
@@ -292,31 +320,11 @@ The app should feel **dynamic and alive** — smooth transitions, playful micro-
 }
 ```
 
-### Page Transition Pattern
-
-```css
-.page-enter {
-  animation: slideIn var(--duration-base) var(--ease-out);
-}
-.page-exit {
-  animation: slideOut var(--duration-fast) var(--ease-in-out);
-}
-
-@keyframes slideIn {
-  from { opacity: 0; transform: translateX(16px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-@keyframes slideOut {
-  from { opacity: 1; transform: translateX(0); }
-  to { opacity: 0; transform: translateX(-16px); }
-}
-```
-
 ### Gradient Progress Bar
 
 ```css
 #progress-bar {
-  background: linear-gradient(90deg, var(--teal), var(--green), var(--purple));
+  background: linear-gradient(90deg, var(--clay), var(--dirt));
   background-size: 200% 100%;
   animation: gradientShift 3s ease-in-out infinite;
 }
@@ -326,95 +334,3 @@ The app should feel **dynamic and alive** — smooth transitions, playful micro-
   100% { background-position: 0% 50%; }
 }
 ```
-
----
-
-## CSS Variables Template (Updated)
-
-```css
-:root {
-  /* Neutrals */
-  --black: #0A0A0A;
-  --gray-950: #141414;
-  --gray-900: #1A1A1A;
-  --gray-800: #2A2A2A;
-  --gray-700: #3A3A3A;
-  --gray-600: #5A5A5A;
-  --gray-400: #8A8A8A;
-  --gray-200: #B0B0B0;
-  --white: #F7F7F7;
-
-  /* Accents */
-  --teal: #08DDC8;
-  --green: #83DD68;
-  --purple: #CF59F3;
-  --accent-gradient: conic-gradient(
-    from 180deg at 50% -18.18%,
-    #08DDC8 0deg, #83DD68 128.08deg,
-    #CF59F3 264.81deg, #08DDC8 360deg
-  );
-
-  /* Semantic */
-  --bg: var(--black);
-  --bg-card: var(--gray-900);
-  --bg-input: var(--gray-800);
-  --text: var(--white);
-  --text-muted: var(--gray-400);
-  --text-dim: var(--gray-600);
-  --border: var(--gray-700);
-  --hover: var(--gray-800);
-
-  /* Spacing (8px base) */
-  --sp-1: 4px;
-  --sp-2: 8px;
-  --sp-3: 16px;
-  --sp-4: 24px;
-  --sp-5: 32px;
-  --sp-6: 48px;
-  --sp-8: 64px;
-
-  /* Radius (8px base) */
-  --r-1: 4px;
-  --r-2: 8px;
-  --r-3: 16px;
-  --r-4: 24px;
-  --r-full: 9999px;
-
-  /* Typography */
-  --text-xs: 10px;
-  --text-sm: 12px;
-  --text-base: 14px;
-  --text-lg: 16px;
-  --text-xl: 20px;
-  --text-2xl: 24px;
-  --font: 'Montserrat', sans-serif;
-  --font-weight: 300;
-
-  /* Glows */
-  --glow-teal: 0 0 12px rgba(8, 221, 200, 0.4);
-  --glow-green: 0 0 12px rgba(131, 221, 104, 0.4);
-  --glow-purple: 0 0 12px rgba(207, 89, 243, 0.4);
-  --glow-accent: 0 0 20px rgba(8, 221, 200, 0.3), 0 0 40px rgba(207, 89, 243, 0.15);
-
-  /* Status */
-  --danger: #FF6161;
-  --glow-danger: 0 0 12px rgba(255, 97, 97, 0.4);
-
-  /* Motion */
-  --duration-fast: 120ms;
-  --duration-base: 250ms;
-  --duration-slow: 500ms;
-  --duration-xslow: 800ms;
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-```
-
----
-
-## Status Colors
-
-| Token      | Hex       | Usage                          |
-|------------|-----------|--------------------------------|
-| `--danger` | `#FF6161` | Destructive actions, errors    |

@@ -5,21 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#0A0A0A">
+  <meta name="theme-color" content="#111111">
   <meta name="apple-mobile-web-app-title" content="Soundboard">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="manifest" href="manifest.json">
   <title>Soundboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/iconoir@7/css/iconoir.css">
   <style>
     :root {
+      /* Baseball Palette */
+      --chalk: #F7F7F7;
+      --night-game: #111111;
+      --clay: #E9D7B4;
+      --dirt: #574F3D;
+      --stitch-red: #B93C3C;
+      --high-heat: #FA4D4D;
+      --outfield: #50684C;
+      --fresh-cut: #71A368;
+
       /* Neutrals */
-      --black: #0A0A0A;
-      --gray-950: #141414;
-      --gray-900: #1A1A1A;
+      --black: #111111;
+      --gray-950: #181818;
+      --gray-900: #1E1E1E;
       --gray-800: #2A2A2A;
       --gray-700: #3A3A3A;
       --gray-600: #5A5A5A;
@@ -27,15 +38,16 @@
       --gray-200: #B0B0B0;
       --white: #F7F7F7;
 
-      /* Accents */
-      --teal: #08DDC8;
-      --green: #83DD68;
-      --purple: #CF59F3;
-      --accent-gradient: conic-gradient(from 180deg at 50% -18.18%, #08DDC8 0deg, #83DD68 128.08deg, #CF59F3 264.81deg, #08DDC8 360deg);
-      --accent-linear: linear-gradient(135deg, #08DDC8, #83DD68, #CF59F3);
+      /* Legacy aliases */
+      --teal: var(--clay);
+      --green: var(--fresh-cut);
+      --purple: var(--dirt);
+      --accent-gradient: var(--clay);
+      --accent-linear: linear-gradient(135deg, #E9D7B4, #574F3D);
 
       /* Status */
-      --danger: #FF6161;
+      --danger: var(--high-heat);
+      --success: var(--fresh-cut);
 
       /* Semantic */
       --bg: var(--black);
@@ -50,8 +62,8 @@
       --border-light: var(--gray-700);
 
       /* Compat aliases */
-      --accent: var(--teal);
-      --accent-hover: #06b8a7;
+      --accent: var(--clay);
+      --accent-hover: #D4C29F;
       --accent-on: var(--black);
 
       /* Spacing (8px base) */
@@ -68,11 +80,13 @@
       --font-weight: 300;
 
       /* Glows */
-      --glow-teal: 0 0 12px rgba(8, 221, 200, 0.4);
-      --glow-green: 0 0 12px rgba(131, 221, 104, 0.4);
-      --glow-purple: 0 0 12px rgba(207, 89, 243, 0.4);
-      --glow-accent: 0 0 20px rgba(8, 221, 200, 0.3), 0 0 40px rgba(207, 89, 243, 0.15);
-      --glow-danger: 0 0 12px rgba(255, 97, 97, 0.4);
+      --glow-clay: 0 0 12px rgba(233, 215, 180, 0.3);
+      --glow-teal: var(--glow-clay);
+      --glow-green: 0 0 12px rgba(113, 163, 104, 0.4);
+      --glow-purple: 0 0 12px rgba(87, 79, 61, 0.3);
+      --glow-accent: 0 0 20px rgba(233, 215, 180, 0.25), 0 0 40px rgba(87, 79, 61, 0.15);
+      --glow-danger: 0 0 12px rgba(250, 77, 77, 0.4);
+      --glow-success: 0 0 12px rgba(113, 163, 104, 0.4);
 
       /* Motion */
       --duration-fast: 120ms;
@@ -480,24 +494,28 @@
     .chip:hover { border-color: var(--teal); color: var(--teal); }
     .chip.active { background: var(--accent-gradient); color: var(--black); border-color: transparent; }
 
-    /* Waveform animation */
-    .waveform { display: flex; align-items: center; justify-content: center; height: 32px; width: 60px; overflow: hidden; }
-    .waveform svg { width: 100%; height: 100%; }
-    .waveform path {
-      fill: none; stroke: var(--black); stroke-width: 2.5; stroke-linecap: round;
-      animation: wavePath 1.5s ease-in-out infinite;
+    /* Equalizer bar animation */
+    .waveform {
+      display: flex; align-items: flex-end; justify-content: center; gap: 3px;
+      height: 32px; width: 60px; overflow: hidden;
     }
-    @keyframes wavePath {
-      0% { d: path("M0,16 C5,8 10,8 15,16 C20,24 25,24 30,16 C35,8 40,8 45,16 C50,24 55,24 60,16"); }
-      33% { d: path("M0,16 C5,24 10,24 15,16 C20,8 25,8 30,16 C35,24 40,24 45,16 C50,8 55,8 60,16"); }
-      66% { d: path("M0,16 C5,10 10,22 15,16 C20,10 25,22 30,16 C35,10 40,22 45,16 C50,10 55,22 60,16"); }
-      100% { d: path("M0,16 C5,8 10,8 15,16 C20,24 25,24 30,16 C35,8 40,8 45,16 C50,24 55,24 60,16"); }
+    .waveform .eq-bar {
+      width: 4px; border-radius: 2px;
+      background: #000;
+      transform-origin: bottom;
+      animation: eqBounce var(--eq-speed, 0.8s) ease-in-out infinite alternate;
+      animation-delay: var(--eq-delay, 0s);
     }
-    .pause-icon { width: 20px; height: 20px; }
+    @keyframes eqBounce {
+      0% { height: var(--eq-min, 4px); }
+      100% { height: var(--eq-max, 28px); }
+    }
+    .pause-icon { font-size: 20px !important; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; }
 
     /* Playing state for lineup buttons */
     .lc-btn.playing { background: var(--accent-gradient) !important; color: var(--black) !important; outline: none !important; border: none !important; box-shadow: var(--glow-accent); }
-    .lc-btn.playing .waveform { height: 20px; width: 36px; }
+    .lc-btn.playing .waveform { height: 20px; width: 36px; gap: 2px; }
+    .lc-btn.playing .waveform .eq-bar { width: 3px; }
 
     .lineup-section { margin-top: var(--sp-5); }
     .lineup-grid {
@@ -554,22 +572,7 @@
       display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-3);
     }
     #loading-overlay.hidden { display: none; opacity: 0; transition: opacity var(--duration-slow); }
-    #loading-overlay .spinner {
-      width: 40px; height: 40px; border: 3px solid var(--gray-800);
-      border-radius: var(--r-full); position: relative;
-      animation: spin 0.8s linear infinite;
-    }
-    #loading-overlay .spinner::before {
-      content: ''; position: absolute; inset: -3px; border-radius: var(--r-full);
-      border: 3px solid transparent; border-top-color: var(--teal);
-    }
     @keyframes spin { to { transform: rotate(360deg); } }
-    @keyframes spin3d {
-      0% { transform: rotateY(0deg); filter: brightness(1); }
-      50% { filter: brightness(0.65); }
-      100% { transform: rotateY(360deg); filter: brightness(1); }
-    }
-    #loading-overlay svg { animation: spin3d 4s linear infinite; transform-style: preserve-3d; }
     #loading-overlay .load-text { color: var(--text-dim); font-size: var(--text-base); }
     #loading-overlay .load-progress { color: var(--teal); font-size: var(--text-sm); }
 
@@ -719,16 +722,15 @@
 <body>
 
   <div id="loading-overlay">
-    <svg viewBox="0 0 560 400" style="height:80px;margin-bottom:8px;" aria-label="SD Padres"><path d="M223.522 66.637c-25.46 0-43.636 18.594-43.52 42.922v48.029c0 16.459 13.837 32.726 33.256 32.726h77.64c5.352 0 6.792 4.884 6.792 6.758 0 .666-.064 42.248-.064 42.248.032 11.074-6.452 19.786-17.968 19.786h-11.31v-58.259h-27.079v.044h-.01l.014 58.215h-28.5c-4.838-.164-5.682-4.729-5.682-6.786 0-1.43-.029-19.678-.029-26.241 0-6.978 8.574-9.245 10.66-9.774.267-.067.448-.215.416-.526-.022-.249-.19-.362-.362-.362h-37.764c0 13.77-.005 40.415-.005 40.449-.085 14.308 11.716 30.323 28.907 30.323h32.37l-.004 29.21c-.079 2.423-.488 4.542-1.125 6.416-2.499 6.6-8.629 9.836-11.4 10.437-.707.153-.711.963-.133 1.081l.059.03h90.575l.793-.005c38.459 0 59.953-18.708 59.953-56.609v-100.111c0-38.256-21.581-56.407-59.637-56.407 0 0-90.813.025-91.609.025-.721 0-.774 1.136 0 1.242.716.099 12.504 1.068 12.504 11.881l.004 29.893c-8.478 0-27.012.032-27.837 0-4.568-.055-6.125-3.33-6.366-5.886.007-7.026.008-42.696.015-43.164.27-13.553 7.6-20.475 20.347-20.475l61.608-.029c3.563 0 6.648 1.741 6.648 6.097 0 4.382-4.637 5.645-5.449 6.034-.352.203-.427.748-.034.748h34.43l-.015-11.355c-.275-8.336-5.8-28.594-31.666-28.594l-69.42-.01h-.001zm44.825 78.789h54.42c18.31 0 30.145 13.156 30.145 30.17v105.526c0 17.593-13.834 27.004-31.304 27.004-16.021 0-43.848.021-53.26.03v-21.966h14.327c25.46 0 42.129-18.426 42.129-42.615 0 0-.005-46.985-.005-49.833 0-10.407-8.511-30.473-33.252-30.473h-23.2v-17.844z" fill="var(--white)"/></svg>
-    <div class="spinner"></div>
+    <img src="logos/Logo-White.svg" alt="Sound" style="height:40px;width:auto;margin-bottom:8px;">
     <div class="load-text">Loading sounds...</div>
     <div class="load-progress" id="load-progress"></div>
   </div>
 
   <header style="background:var(--bg-deep);text-align:center;padding:12px 16px;display:flex;align-items:center;justify-content:center;gap:12px;position:relative;border-bottom:1px solid var(--border);">
-    <svg viewBox="0 0 560 400" style="height:42px;" aria-label="SD Padres"><path d="M223.522 66.637c-25.46 0-43.636 18.594-43.52 42.922v48.029c0 16.459 13.837 32.726 33.256 32.726h77.64c5.352 0 6.792 4.884 6.792 6.758 0 .666-.064 42.248-.064 42.248.032 11.074-6.452 19.786-17.968 19.786h-11.31v-58.259h-27.079v.044h-.01l.014 58.215h-28.5c-4.838-.164-5.682-4.729-5.682-6.786 0-1.43-.029-19.678-.029-26.241 0-6.978 8.574-9.245 10.66-9.774.267-.067.448-.215.416-.526-.022-.249-.19-.362-.362-.362h-37.764c0 13.77-.005 40.415-.005 40.449-.085 14.308 11.716 30.323 28.907 30.323h32.37l-.004 29.21c-.079 2.423-.488 4.542-1.125 6.416-2.499 6.6-8.629 9.836-11.4 10.437-.707.153-.711.963-.133 1.081l.059.03h90.575l.793-.005c38.459 0 59.953-18.708 59.953-56.609v-100.111c0-38.256-21.581-56.407-59.637-56.407 0 0-90.813.025-91.609.025-.721 0-.774 1.136 0 1.242.716.099 12.504 1.068 12.504 11.881l.004 29.893c-8.478 0-27.012.032-27.837 0-4.568-.055-6.125-3.33-6.366-5.886.007-7.026.008-42.696.015-43.164.27-13.553 7.6-20.475 20.347-20.475l61.608-.029c3.563 0 6.648 1.741 6.648 6.097 0 4.382-4.637 5.645-5.449 6.034-.352.203-.427.748-.034.748h34.43l-.015-11.355c-.275-8.336-5.8-28.594-31.666-28.594l-69.42-.01h-.001zm44.825 78.789h54.42c18.31 0 30.145 13.156 30.145 30.17v105.526c0 17.593-13.834 27.004-31.304 27.004-16.021 0-43.848.021-53.26.03v-21.966h14.327c25.46 0 42.129-18.426 42.129-42.615 0 0-.005-46.985-.005-49.833 0-10.407-8.511-30.473-33.252-30.473h-23.2v-17.844z" fill="var(--white)"/></svg>
-    <button class="settings-toggle" id="settings-toggle" title="Settings"><i data-lucide="settings" style="width:18px;height:18px;"></i></button>
-    <button class="theme-toggle" id="theme-toggle" style="display:none;" title="Toggle light/dark mode"><i data-lucide="sun" style="width:18px;height:18px;"></i></button>
+    <img src="logos/Sound-White.svg" alt="Sound" style="height:24px;width:auto;">
+    <button class="settings-toggle" id="settings-toggle" title="Settings"><i class="iconoir-settings" style="font-size:18px;"></i></button>
+    <button class="theme-toggle" id="theme-toggle" style="display:none;" title="Toggle light/dark mode"><i class="iconoir-sun-light" style="font-size:18px;"></i></button>
   </header>
 
   <nav id="settings-nav">
@@ -763,8 +765,8 @@
 
   <!-- Main Tabs -->
   <nav id="main-tabs">
-    <button class="active" data-tab="game-tab"><i data-lucide="circle-dot" style="width:16px;height:16px;"></i> Game</button>
-    <button data-tab="library-tab"><i data-lucide="library" style="width:16px;height:16px;"></i> Music Library</button>
+    <button class="active" data-tab="game-tab"><i class="iconoir-gamepad" style="font-size:16px;"></i> Game</button>
+    <button data-tab="library-tab"><i class="iconoir-book-stack" style="font-size:16px;"></i> Music Library</button>
   </nav>
 
   <!-- Play Page -->
@@ -791,11 +793,11 @@
       <div class="section-title">Song Library</div>
       <div class="library-controls">
         <div class="library-search">
-          <i data-lucide="search" style="width:16px;height:16px;color:var(--text-dim);"></i>
+          <i class="iconoir-search" style="font-size:16px;color:var(--text-dim);"></i>
           <input type="text" id="library-search" placeholder="Search songs...">
         </div>
-        <button class="small-btn primary" id="play-all-btn"><i data-lucide="play" style="width:14px;height:14px;"></i><span class="btn-label"> Play All</span></button>
-        <button class="small-btn" id="add-song-btn"><i data-lucide="plus" style="width:14px;height:14px;"></i><span class="btn-label"> Add Song</span></button>
+        <button class="small-btn primary" id="play-all-btn"><i class="iconoir-play" style="font-size:14px;"></i><span class="btn-label"> Play All</span></button>
+        <button class="small-btn" id="add-song-btn"><i class="iconoir-plus" style="font-size:14px;"></i><span class="btn-label"> Add Song</span></button>
       </div>
       <div id="library-list" class="library-list"></div>
       <div id="library-empty" class="empty-state" style="margin-top:20px;">
@@ -821,10 +823,10 @@
     </div>
     <div class="time-display" id="time-display">0:00 / 0:00</div>
     <div class="controls">
-      <button class="stop-btn" id="stop-btn" title="Stop"><i data-lucide="square" style="width:16px;height:16px;"></i></button>
-      <button id="prev-btn" title="Previous"><i data-lucide="skip-back" style="width:16px;height:16px;"></i></button>
-      <button id="play-pause-btn" class="play-pause" title="Play/Pause"><i data-lucide="play" style="width:20px;height:20px;"></i></button>
-      <button id="next-btn" title="Next"><i data-lucide="skip-forward" style="width:16px;height:16px;"></i></button>
+      <button class="stop-btn" id="stop-btn" title="Stop"><i class="iconoir-square" style="font-size:16px;"></i></button>
+      <button id="prev-btn" title="Previous"><i class="iconoir-skip-prev" style="font-size:16px;"></i></button>
+      <button id="play-pause-btn" class="play-pause" title="Play/Pause"><i class="iconoir-play" style="font-size:20px;"></i></button>
+      <button id="next-btn" title="Next"><i class="iconoir-skip-next" style="font-size:16px;"></i></button>
     </div>
   </div>
 
@@ -856,7 +858,7 @@
       </div>
       <div class="modal-actions">
         <button class="small-btn" id="cancel-song-btn">Cancel</button>
-        <button class="small-btn primary" id="save-song-btn"><i data-lucide="upload" style="width:14px;height:14px;"></i> Upload</button>
+        <button class="small-btn primary" id="save-song-btn"><i class="iconoir-upload" style="font-size:14px;"></i> Upload</button>
       </div>
     </div>
   </div>
@@ -922,14 +924,17 @@
     }
 
     async function signedStorageUrl(path) {
-      const { data, error } = await sb.storage.from(STORAGE_BUCKET).createSignedUrl(path, 86400);
-      if (error) { console.error('Signed URL error:', path, error); return storageUrl(path); }
-      return data.signedUrl;
+      // Bucket is public — use direct public URL (more reliable than signed URLs)
+      return storageUrl(path);
     }
 
     function makeAudio(url) {
       const a = new Audio(url);
       return a;
+    }
+
+    function fileExt(name) {
+      return (name && name.match(/\.[^.]+$/)) ? name.match(/\.[^.]+$/)[0] : '';
     }
 
     async function uploadFile(path, file, onProgress) {
@@ -1031,8 +1036,16 @@
     }
 
     async function deletePlayerFromDB(id) {
+      // Find the player to get file extensions before deleting
+      const player = players.find(p => p.id === id);
       await sb.from('players').delete().eq('id', id);
-      for (const type of ['photo', 'intro', 'song', 'combo']) await deleteFile(`player-${id}-${type}`);
+      for (const type of ['photo', 'intro', 'song', 'combo']) {
+        await deleteFile(`player-${id}-${type}`);
+        // Also remove version with extension
+        const fileField = player && player[type + 'File'];
+        const ext = fileExt(fileField);
+        if (ext) await deleteFile(`player-${id}-${type}${ext}`);
+      }
     }
 
     async function savePlayers() {
@@ -1056,11 +1069,26 @@
 
     // ---- Load all data ----
     async function loadAllData() {
+      // List actual storage files to handle naming variations (some files have extensions, some don't)
+      const { data: storageFiles } = await sb.storage.from(STORAGE_BUCKET).list('', { limit: 1000 });
+      const storageFileNames = new Set((storageFiles || []).map(f => f.name));
+
+      // Find the correct storage path — prefers files with extension, falls back to extensionless
+      function resolveStoragePath(basePath, originalFileName) {
+        if (originalFileName) {
+          const ext = (originalFileName.match(/\.[^.]+$/) || [''])[0];
+          if (ext && storageFileNames.has(basePath + ext)) return basePath + ext;
+        }
+        if (storageFileNames.has(basePath)) return basePath;
+        return basePath;
+      }
+
       // Load sounds
       const { data: soundRows } = await sb.from('sounds').select('*').order('sort_order');
       if (soundRows) {
         for (const s of soundRows) {
-          const url = await signedStorageUrl(`sfx-${s.id}`);
+          const path = resolveStoragePath(`sfx-${s.id}`, s.file_name);
+          const url = await signedStorageUrl(path);
           const entry = { id: s.id, fileName: s.file_name, label: s.label, url, audio: makeAudio(url) };
           sounds.push(entry);
           renderSfxItem(entry);
@@ -1082,7 +1110,8 @@
           if (p.photo_file) player.photoUrl = storageUrl(`player-${p.id}-photo`) + '?t=' + Date.now();
           for (const type of ['intro', 'song', 'combo']) {
             if (p[type + '_file']) {
-              const fileUrl = await signedStorageUrl(`player-${p.id}-${type}`);
+              const storagePath = resolveStoragePath(`player-${p.id}-${type}`, p[type + '_file']);
+              const fileUrl = await signedStorageUrl(storagePath);
               player[type + 'Url'] = fileUrl;
               player[type + 'Audio'] = makeAudio(fileUrl);
             }
@@ -1230,19 +1259,20 @@
       saveBtn.disabled = true;
       saveBtn.textContent = 'Uploading...';
 
-      const uploaded = await uploadFile(`library-${id}`, file);
+      const ext = fileExt(file.name);
+      const libPath = `library-${id}${ext}`;
+      const uploaded = await uploadFile(libPath, file);
       if (!uploaded) { saveBtn.disabled = false; saveBtn.textContent = 'Upload'; return alert('Upload failed.'); }
 
       const { error } = await sb.from('library').insert({ id, title, artist, category, file_name: file.name, sort_order: librarySongs.length });
       if (error) { console.error('Save song error:', error); saveBtn.disabled = false; saveBtn.textContent = 'Upload'; return alert('Save failed: ' + error.message); }
 
-      const url = await signedStorageUrl(`library-${id}`);
+      const url = await signedStorageUrl(libPath);
       librarySongs.push({ id, title, artist, category, fileName: file.name, url, audio: makeAudio(url) });
       renderLibrary();
       addSongModal.classList.remove('visible');
       saveBtn.disabled = false;
       saveBtn.textContent = 'Upload';
-      lucide.createIcons();
     });
 
     async function deleteLibrarySong(id) {
@@ -1268,9 +1298,9 @@
             <div class="song-meta">${song.artist ? song.artist + ' · ' : ''}${song.category.split(',').map(c => categoryLabels[c.trim()] || c.trim()).join(', ')}</div>
           </div>
           <div class="song-actions">
-            <button class="queue-song" title="Add to Queue"><i data-lucide="list-plus" style="width:14px;height:14px;"></i></button>
-            <button class="play-song" title="Play"><i data-lucide="play" style="width:14px;height:14px;"></i></button>
-            <button class="delete-song" title="Delete"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button>
+            <button class="queue-song" title="Add to Queue"><i class="iconoir-playlist-plus" style="font-size:14px;"></i></button>
+            <button class="play-song" title="Play"><i class="iconoir-play" style="font-size:14px;"></i></button>
+            <button class="delete-song" title="Delete"><i class="iconoir-trash" style="font-size:14px;"></i></button>
           </div>
         `;
         div.querySelector('.queue-song').addEventListener('click', () => {
@@ -1284,7 +1314,6 @@
         });
         libraryList.appendChild(div);
       });
-      lucide.createIcons();
     }
 
     librarySearchInput.addEventListener('input', () => renderLibrary(librarySearchInput.value));
@@ -1315,10 +1344,10 @@
         div.draggable = true;
         div.dataset.idx = i;
         div.innerHTML = `
-          <span class="queue-drag"><i data-lucide="grip-vertical" style="width:14px;height:14px;"></i></span>
+          <span class="queue-drag"><i class="iconoir-drag" style="font-size:14px;"></i></span>
           <span class="queue-pos">${i - queueIndex}</span>
           <span class="queue-name">${item.name || 'Unknown'}</span>
-          <button class="queue-remove" title="Remove"><i data-lucide="x" style="width:12px;height:12px;"></i></button>
+          <button class="queue-remove" title="Remove"><i class="iconoir-xmark" style="font-size:12px;"></i></button>
         `;
         div.querySelector('.queue-remove').addEventListener('click', () => {
           removeFromQueue(i);
@@ -1339,7 +1368,6 @@
         });
         queueListEl.appendChild(div);
       });
-      lucide.createIcons();
     }
 
     function removeFromQueue(idx) {
@@ -1401,8 +1429,10 @@
           sort_order: sounds.length
         }).select().single();
         if (error || !data) { console.error('Insert sound error:', error); continue; }
-        await uploadFile(`sfx-${data.id}`, file);
-        const url = await signedStorageUrl(`sfx-${data.id}`);
+        const ext = fileExt(file.name);
+        const sfxPath = `sfx-${data.id}${ext}`;
+        await uploadFile(sfxPath, file);
+        const url = await signedStorageUrl(sfxPath);
         const entry = { id: data.id, fileName: data.file_name, label: data.label, url, audio: makeAudio(url) };
         sounds.push(entry);
         renderSfxItem(entry);
@@ -1475,12 +1505,12 @@
         card.dataset.index = players.indexOf(p);
         card.innerHTML = `
           <div class="player-header">
-            <span class="drag-handle"><i data-lucide="grip-vertical" style="width:16px;height:16px;"></i></span>
-            ${p.photoUrl ? `<img class="player-photo" src="${p.photoUrl}" alt="${esc(p.name)}">` : '<div class="player-photo-placeholder"><i data-lucide="camera" style="width:16px;height:16px;"></i></div>'}
+            <span class="drag-handle"><i class="iconoir-drag" style="font-size:16px;"></i></span>
+            ${p.photoUrl ? `<img class="player-photo" src="${p.photoUrl}" alt="${esc(p.name)}">` : '<div class="player-photo-placeholder"><i class="iconoir-camera" style="font-size:16px;"></i></div>'}
             <input type="text" class="player-number-input" value="${esc(p.number)}" placeholder="#" title="Player number">
             <div class="player-name-display">${esc(p.firstName)} <strong>${esc(p.lastName)}</strong></div>
             <button class="bench-toggle" title="${p.active !== false ? 'Bench player' : 'Activate player'}">
-              <i data-lucide="${p.active !== false ? 'user-check' : 'user-x'}" style="width:14px;height:14px;"></i>
+              <i class="${p.active !== false ? 'iconoir-user-badge-check' : 'iconoir-user-xmark'}" style="font-size:14px;"></i>
               ${p.active !== false ? 'Active' : 'Benched'}
             </button>
           </div>
@@ -1580,11 +1610,15 @@
           const file = introInput.files[0];
           if (!file) return;
           const onProgress = startProgress(introProgress, introStatus);
+          const ext = fileExt(file.name);
+          const path = `player-${p.id}-intro${ext}`;
+          // Remove old extensionless version too
+          await deleteFile(`player-${p.id}-intro`);
           p.introFile = file.name;
-          const ok = await uploadFile(`player-${p.id}-intro`, file, onProgress);
+          const ok = await uploadFile(path, file, onProgress);
           endProgress(introProgress, introStatus, ok);
           if (ok) {
-            p.introUrl = await signedStorageUrl(`player-${p.id}-intro`);
+            p.introUrl = await signedStorageUrl(path);
             p.introAudio = makeAudio(p.introUrl);
             renderRoster();
             await savePlayerToDB(p);
@@ -1599,11 +1633,15 @@
           const file = songInput.files[0];
           if (!file) return;
           const onProgress = startProgress(songProgress, songStatus);
+          const ext = fileExt(file.name);
+          const path = `player-${p.id}-song${ext}`;
+          // Remove old extensionless version too
+          await deleteFile(`player-${p.id}-song`);
           p.songFile = file.name;
-          const ok = await uploadFile(`player-${p.id}-song`, file, onProgress);
+          const ok = await uploadFile(path, file, onProgress);
           endProgress(songProgress, songStatus, ok);
           if (ok) {
-            p.songUrl = await signedStorageUrl(`player-${p.id}-song`);
+            p.songUrl = await signedStorageUrl(path);
             p.songAudio = makeAudio(p.songUrl);
             renderRoster();
             await savePlayerToDB(p);
@@ -1618,11 +1656,15 @@
           const file = comboInput.files[0];
           if (!file) return;
           const onProgress = startProgress(comboProgress, comboStatus);
+          const ext = fileExt(file.name);
+          const path = `player-${p.id}-combo${ext}`;
+          // Remove old extensionless version too
+          await deleteFile(`player-${p.id}-combo`);
           p.comboFile = file.name;
-          const ok = await uploadFile(`player-${p.id}-combo`, file, onProgress);
+          const ok = await uploadFile(path, file, onProgress);
           endProgress(comboProgress, comboStatus, ok);
           if (ok) {
-            p.comboUrl = await signedStorageUrl(`player-${p.id}-combo`);
+            p.comboUrl = await signedStorageUrl(path);
             p.comboAudio = makeAudio(p.comboUrl);
             renderRoster();
             await savePlayerToDB(p);
@@ -1656,7 +1698,6 @@
 
         rosterList.appendChild(card);
       });
-      lucide.createIcons();
     }
 
     // ---- Play Page ----
@@ -1692,14 +1733,14 @@
 
         card.innerHTML = `
           <div class="lc-name">
-            ${p.photoUrl ? `<img class="lc-photo" src="${p.photoUrl}" alt="${esc(p.name)}">` : '<div class="lc-photo-placeholder"><i data-lucide="camera" style="width:16px;height:16px;"></i></div>'}
+            ${p.photoUrl ? `<img class="lc-photo" src="${p.photoUrl}" alt="${esc(p.name)}">` : '<div class="lc-photo-placeholder"><i class="iconoir-camera" style="font-size:16px;"></i></div>'}
             <div class="player-number">${esc(p.number)}</div>
             ${esc(p.firstName)} <strong>${esc(p.lastName)}</strong>
           </div>
           <div class="lc-buttons">
-            <button class="lc-btn lc-btn-sq intro-btn" ${!hasIntro ? 'disabled' : ''} title="Intro"><i data-lucide="mic" style="width:16px;height:16px;"></i></button>
-            <button class="lc-btn lc-btn-sq song-btn" ${!hasSong ? 'disabled' : ''} title="Song"><i data-lucide="music" style="width:16px;height:16px;"></i></button>
-            <button class="lc-btn combo-btn full" ${!hasCombo ? 'disabled' : ''} title="Combined"><i data-lucide="play" style="width:20px;height:20px;"></i></button>
+            <button class="lc-btn lc-btn-sq intro-btn" ${!hasIntro ? 'disabled' : ''} title="Intro"><i class="iconoir-microphone" style="font-size:16px;"></i></button>
+            <button class="lc-btn lc-btn-sq song-btn" ${!hasSong ? 'disabled' : ''} title="Song"><i class="iconoir-music-double-note" style="font-size:16px;"></i></button>
+            <button class="lc-btn combo-btn full" ${!hasCombo ? 'disabled' : ''} title="Combined"><i class="iconoir-play" style="font-size:20px;"></i></button>
           </div>
         `;
 
@@ -1723,11 +1764,20 @@
 
         lineupGrid.appendChild(card);
       });
-      lucide.createIcons();
     }
 
     // ---- Button Playing State ----
-    const waveformHTML = `<div class="waveform"><svg viewBox="0 0 60 32"><path d="M0,16 C5,8 10,8 15,16 C20,24 25,24 30,16 C35,8 40,8 45,16 C50,24 55,24 60,16"/></svg></div>`;
+    const waveformHTML = `<div class="waveform">${
+      [
+        { speed: '0.6s', delay: '0s',    min: '4px',  max: '24px' },
+        { speed: '0.5s', delay: '0.15s', min: '6px',  max: '30px' },
+        { speed: '0.7s', delay: '0.05s', min: '3px',  max: '18px' },
+        { speed: '0.45s', delay: '0.2s', min: '5px',  max: '28px' },
+        { speed: '0.55s', delay: '0.1s', min: '4px',  max: '22px' },
+        { speed: '0.65s', delay: '0.25s', min: '6px',  max: '26px' },
+        { speed: '0.5s', delay: '0.08s', min: '3px',  max: '20px' },
+      ].map(b => `<div class="eq-bar" style="--eq-speed:${b.speed};--eq-delay:${b.delay};--eq-min:${b.min};--eq-max:${b.max}"></div>`).join('')
+    }</div>`;
     let activePlayBtn = null;
     let activeBtnOrigHTML = '';
 
@@ -1742,16 +1792,14 @@
       if (isSmall) {
         btn.innerHTML = waveformHTML;
       } else {
-        btn.innerHTML = `${waveformHTML}<i data-lucide="pause" class="pause-icon"></i>`;
+        btn.innerHTML = `${waveformHTML}<i class="iconoir-pause pause-icon"></i>`;
       }
-      lucide.createIcons({ nodes: [btn] });
     }
 
     function clearButtonPlaying() {
       if (!activePlayBtn) return;
       activePlayBtn.classList.remove('playing');
       activePlayBtn.innerHTML = activeBtnOrigHTML;
-      lucide.createIcons({ nodes: [activePlayBtn] });
       activePlayBtn = null;
       activeBtnOrigHTML = '';
     }
@@ -1851,7 +1899,7 @@
       // If audio is in error state or never loaded, create a fresh element
       if (item.audio.error || item.audio.readyState === 0) {
         const src = item.audio.src;
-        item.audio = new Audio(src);
+        item.audio = makeAudio(src);
       }
 
       if (item.audio.readyState >= 2) {
@@ -1901,6 +1949,7 @@
           updateNowPlaying();
         }
       };
+      updateMediaSession();
     }
 
     function stopAll(clearQueue) {
@@ -1983,14 +2032,12 @@
         trackName.textContent = playQueue[queueIndex].label || playQueue[queueIndex].name;
         trackStatus.textContent = isPlaying ? 'Now playing' : 'Paused';
         playPauseBtn.innerHTML = isPlaying
-          ? '<i data-lucide="pause" style="width:20px;height:20px;"></i>'
-          : '<i data-lucide="play" style="width:20px;height:20px;"></i>';
-        lucide.createIcons();
+          ? '<i class="iconoir-pause" style="font-size:24px;"></i>'
+          : '<i class="iconoir-play" style="font-size:20px;"></i>';
       } else {
         trackName.textContent = 'Nothing playing';
         trackStatus.textContent = 'Tap a button to play';
-        playPauseBtn.innerHTML = '<i data-lucide="play" style="width:20px;height:20px;"></i>';
-        lucide.createIcons();
+        playPauseBtn.innerHTML = '<i class="iconoir-play" style="font-size:20px;"></i>';
       }
     }
 
@@ -2009,10 +2056,54 @@
           progressBar.style.width = (audio.currentTime / audio.duration * 100) + '%';
           timeDisplay.textContent = fmtTime(audio.currentTime) + ' / ' + fmtTime(audio.duration);
         }
+        // Fallback auto-advance: if track ended but onended didn't fire (iOS bg suspension)
+        if (audio.ended && isPlaying) {
+          queueIndex++;
+          if (queueIndex < playQueue.length) {
+            playCurrentInQueue();
+          } else {
+            clearButtonPlaying();
+            isPlaying = false;
+            updateNowPlaying();
+          }
+        }
       } else {
         timeDisplay.textContent = '0:00 / 0:00';
       }
-    }, 100);
+    }, 250);
+
+    // When page wakes from background (screen on), catch up on ended tracks
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && isPlaying && queueIndex >= 0 && queueIndex < playQueue.length) {
+        const audio = playQueue[queueIndex].audio;
+        if (audio.ended) {
+          queueIndex++;
+          if (queueIndex < playQueue.length) {
+            playCurrentInQueue();
+          } else {
+            clearButtonPlaying();
+            isPlaying = false;
+            updateNowPlaying();
+          }
+        }
+      }
+    });
+
+    // Media Session API — tells iOS this is a media app, reduces JS suspension
+    function updateMediaSession() {
+      if (!('mediaSession' in navigator)) return;
+      if (queueIndex >= 0 && queueIndex < playQueue.length) {
+        const item = playQueue[queueIndex];
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: item.label || item.name || 'Walk-Up Song',
+          artist: 'Baseball SoundBoard',
+        });
+      }
+      navigator.mediaSession.setActionHandler('play', togglePlayPause);
+      navigator.mediaSession.setActionHandler('pause', togglePlayPause);
+      navigator.mediaSession.setActionHandler('nexttrack', playQueue.length > 1 ? skipNext : null);
+      navigator.mediaSession.setActionHandler('previoustrack', playQueue.length > 1 ? skipPrev : null);
+    }
 
     // Utility
     function esc(str) {
@@ -2032,18 +2123,18 @@
     });
     function updateThemeIcon() {
       themeBtn.innerHTML = document.body.classList.contains('light')
-        ? '<i data-lucide="moon" style="width:18px;height:18px;"></i>'
-        : '<i data-lucide="sun" style="width:18px;height:18px;"></i>';
-      lucide.createIcons();
+        ? '<i class="iconoir-half-moon" style="font-size:18px;"></i>'
+        : '<i class="iconoir-sun-light" style="font-size:18px;"></i>';
     }
 
     // ---- Preload ----
     function preloadAudio(audio) {
       return new Promise(resolve => {
-        if (audio.readyState >= 4) { resolve(); return; }
+        if (audio.readyState >= 2) { resolve(); return; }
         audio.preload = 'auto';
-        audio.addEventListener('canplaythrough', () => resolve(), { once: true });
-        audio.addEventListener('error', () => resolve(), { once: true });
+        const timeout = setTimeout(() => resolve(), 5000);
+        audio.addEventListener('canplay', () => { clearTimeout(timeout); resolve(); }, { once: true });
+        audio.addEventListener('error', () => { clearTimeout(timeout); resolve(); }, { once: true });
         audio.load();
       });
     }
@@ -2056,17 +2147,22 @@
         if (p.songAudio) allAudio.push(p.songAudio);
         if (p.comboAudio) allAudio.push(p.comboAudio);
       });
+      librarySongs.forEach(s => allAudio.push(s.audio));
       const progressEl = document.getElementById('load-progress');
       let loaded = 0;
       const total = allAudio.length;
       if (total === 0) return;
       progressEl.textContent = `0 / ${total}`;
-      await Promise.all(allAudio.map(a =>
-        preloadAudio(a).then(() => {
-          loaded++;
-          progressEl.textContent = `${loaded} / ${total}`;
-        })
-      ));
+      // Race all preloads against a 15s global timeout so the app always loads
+      await Promise.race([
+        Promise.all(allAudio.map(a =>
+          preloadAudio(a).then(() => {
+            loaded++;
+            progressEl.textContent = `${loaded} / ${total}`;
+          })
+        )),
+        new Promise(resolve => setTimeout(resolve, 15000))
+      ]);
     }
 
     // ---- Boot ----
@@ -2079,8 +2175,21 @@
       }
       document.getElementById('loading-overlay').classList.add('hidden');
       renderPlayPage();
-      lucide.createIcons();
     })();
+  </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').then(reg => {
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'activated') {
+              console.log('Service worker updated — offline support ready');
+            }
+          });
+        });
+      }).catch(err => console.error('SW registration failed:', err));
+    }
   </script>
 </body>
 </html>
