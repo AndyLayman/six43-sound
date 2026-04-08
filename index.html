@@ -929,7 +929,15 @@
     }
 
     function makeAudio(url) {
-      const a = new Audio(url);
+      // Fetch as blob to guarantee correct MIME type regardless of server headers
+      const a = new Audio();
+      fetch(url).then(r => r.blob()).then(blob => {
+        const audioBlob = new Blob([blob], { type: 'audio/mpeg' });
+        a.src = URL.createObjectURL(audioBlob);
+      }).catch(() => {
+        // Fallback to direct URL if fetch fails
+        a.src = url;
+      });
       return a;
     }
 
@@ -1259,13 +1267,15 @@
       saveBtn.disabled = true;
       saveBtn.textContent = 'Uploading...';
 
-      const uploaded = await uploadFile(`library-${id}`, file);
+      const ext = fileExt(file.name);
+      const libPath = `library-${id}${ext}`;
+      const uploaded = await uploadFile(libPath, file);
       if (!uploaded) { saveBtn.disabled = false; saveBtn.textContent = 'Upload'; return alert('Upload failed.'); }
 
       const { error } = await sb.from('library').insert({ id, title, artist, category, file_name: file.name, sort_order: librarySongs.length });
       if (error) { console.error('Save song error:', error); saveBtn.disabled = false; saveBtn.textContent = 'Upload'; return alert('Save failed: ' + error.message); }
 
-      const url = await signedStorageUrl(`library-${id}`);
+      const url = await signedStorageUrl(libPath);
       librarySongs.push({ id, title, artist, category, fileName: file.name, url, audio: makeAudio(url) });
       renderLibrary();
       addSongModal.classList.remove('visible');
@@ -1427,8 +1437,10 @@
           sort_order: sounds.length
         }).select().single();
         if (error || !data) { console.error('Insert sound error:', error); continue; }
-        await uploadFile(`sfx-${data.id}`, file);
-        const url = await signedStorageUrl(`sfx-${data.id}`);
+        const ext = fileExt(file.name);
+        const sfxPath = `sfx-${data.id}${ext}`;
+        await uploadFile(sfxPath, file);
+        const url = await signedStorageUrl(sfxPath);
         const entry = { id: data.id, fileName: data.file_name, label: data.label, url, audio: makeAudio(url) };
         sounds.push(entry);
         renderSfxItem(entry);
@@ -1885,7 +1897,7 @@
       // If audio is in error state or never loaded, create a fresh element
       if (item.audio.error || item.audio.readyState === 0) {
         const src = item.audio.src;
-        item.audio = new Audio(src);
+        item.audio = makeAudio(src);
       }
 
       if (item.audio.readyState >= 2) {
