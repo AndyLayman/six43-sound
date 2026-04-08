@@ -2059,8 +2059,9 @@
       return new Promise(resolve => {
         if (audio.readyState >= 4) { resolve(); return; }
         audio.preload = 'auto';
-        audio.addEventListener('canplaythrough', () => resolve(), { once: true });
-        audio.addEventListener('error', () => resolve(), { once: true });
+        const timeout = setTimeout(() => resolve(), 8000);
+        audio.addEventListener('canplaythrough', () => { clearTimeout(timeout); resolve(); }, { once: true });
+        audio.addEventListener('error', () => { clearTimeout(timeout); resolve(); }, { once: true });
         audio.load();
       });
     }
