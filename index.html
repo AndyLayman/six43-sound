@@ -488,7 +488,7 @@
     }
     .waveform .eq-bar {
       width: 4px; border-radius: 2px;
-      background: var(--black);
+      background: #000;
       transform-origin: bottom;
       animation: eqBounce var(--eq-speed, 0.8s) ease-in-out infinite alternate;
       animation-delay: var(--eq-delay, 0s);
@@ -497,7 +497,7 @@
       0% { height: var(--eq-min, 4px); }
       100% { height: var(--eq-max, 28px); }
     }
-    .pause-icon { width: 28px; height: 28px; }
+    .pause-icon { font-size: 32px !important; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; }
 
     /* Playing state for lineup buttons */
     .lc-btn.playing { background: var(--accent-gradient) !important; color: var(--black) !important; outline: none !important; border: none !important; box-shadow: var(--glow-accent); }
