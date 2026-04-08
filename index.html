@@ -481,24 +481,28 @@
     .chip:hover { border-color: var(--teal); color: var(--teal); }
     .chip.active { background: var(--accent-gradient); color: var(--black); border-color: transparent; }
 
-    /* Waveform animation */
-    .waveform { display: flex; align-items: center; justify-content: center; height: 32px; width: 60px; overflow: hidden; }
-    .waveform svg { width: 100%; height: 100%; }
-    .waveform path {
-      fill: none; stroke: var(--black); stroke-width: 2.5; stroke-linecap: round;
-      animation: wavePath 1.5s ease-in-out infinite;
+    /* Equalizer bar animation */
+    .waveform {
+      display: flex; align-items: flex-end; justify-content: center; gap: 3px;
+      height: 32px; width: 60px; overflow: hidden;
     }
-    @keyframes wavePath {
-      0% { d: path("M0,16 C5,8 10,8 15,16 C20,24 25,24 30,16 C35,8 40,8 45,16 C50,24 55,24 60,16"); }
-      33% { d: path("M0,16 C5,24 10,24 15,16 C20,8 25,8 30,16 C35,24 40,24 45,16 C50,8 55,8 60,16"); }
-      66% { d: path("M0,16 C5,10 10,22 15,16 C20,10 25,22 30,16 C35,10 40,22 45,16 C50,10 55,22 60,16"); }
-      100% { d: path("M0,16 C5,8 10,8 15,16 C20,24 25,24 30,16 C35,8 40,8 45,16 C50,24 55,24 60,16"); }
+    .waveform .eq-bar {
+      width: 4px; border-radius: 2px;
+      background: var(--black);
+      transform-origin: bottom;
+      animation: eqBounce var(--eq-speed, 0.8s) ease-in-out infinite alternate;
+      animation-delay: var(--eq-delay, 0s);
     }
-    .pause-icon { width: 20px; height: 20px; }
+    @keyframes eqBounce {
+      0% { height: var(--eq-min, 4px); }
+      100% { height: var(--eq-max, 28px); }
+    }
+    .pause-icon { width: 28px; height: 28px; }
 
     /* Playing state for lineup buttons */
     .lc-btn.playing { background: var(--accent-gradient) !important; color: var(--black) !important; outline: none !important; border: none !important; box-shadow: var(--glow-accent); }
-    .lc-btn.playing .waveform { height: 20px; width: 36px; }
+    .lc-btn.playing .waveform { height: 20px; width: 36px; gap: 2px; }
+    .lc-btn.playing .waveform .eq-bar { width: 3px; }
 
     .lineup-section { margin-top: var(--sp-5); }
     .lineup-grid {
@@ -1775,7 +1779,17 @@
     }
 
     // ---- Button Playing State ----
-    const waveformHTML = `<div class="waveform"><svg viewBox="0 0 60 32"><path d="M0,16 C5,8 10,8 15,16 C20,24 25,24 30,16 C35,8 40,8 45,16 C50,24 55,24 60,16"/></svg></div>`;
+    const waveformHTML = `<div class="waveform">${
+      [
+        { speed: '0.6s', delay: '0s',    min: '4px',  max: '24px' },
+        { speed: '0.5s', delay: '0.15s', min: '6px',  max: '30px' },
+        { speed: '0.7s', delay: '0.05s', min: '3px',  max: '18px' },
+        { speed: '0.45s', delay: '0.2s', min: '5px',  max: '28px' },
+        { speed: '0.55s', delay: '0.1s', min: '4px',  max: '22px' },
+        { speed: '0.65s', delay: '0.25s', min: '6px',  max: '26px' },
+        { speed: '0.5s', delay: '0.08s', min: '3px',  max: '20px' },
+      ].map(b => `<div class="eq-bar" style="--eq-speed:${b.speed};--eq-delay:${b.delay};--eq-min:${b.min};--eq-max:${b.max}"></div>`).join('')
+    }</div>`;
     let activePlayBtn = null;
     let activeBtnOrigHTML = '';
 
@@ -2029,7 +2043,7 @@
         trackName.textContent = playQueue[queueIndex].label || playQueue[queueIndex].name;
         trackStatus.textContent = isPlaying ? 'Now playing' : 'Paused';
         playPauseBtn.innerHTML = isPlaying
-          ? '<i class="iconoir-pause" style="font-size:20px;"></i>'
+          ? '<i class="iconoir-pause" style="font-size:24px;"></i>'
           : '<i class="iconoir-play" style="font-size:20px;"></i>';
       } else {
         trackName.textContent = 'Nothing playing';
