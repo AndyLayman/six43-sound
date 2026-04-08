@@ -933,6 +933,10 @@
       return a;
     }
 
+    function fileExt(name) {
+      return (name && name.match(/\.[^.]+$/)) ? name.match(/\.[^.]+$/)[0] : '';
+    }
+
     async function uploadFile(path, file, onProgress) {
       // Remove existing file first to ensure clean replace
       await sb.storage.from(STORAGE_BUCKET).remove([path]);
@@ -1032,8 +1036,16 @@
     }
 
     async function deletePlayerFromDB(id) {
+      // Find the player to get file extensions before deleting
+      const player = players.find(p => p.id === id);
       await sb.from('players').delete().eq('id', id);
-      for (const type of ['photo', 'intro', 'song', 'combo']) await deleteFile(`player-${id}-${type}`);
+      for (const type of ['photo', 'intro', 'song', 'combo']) {
+        await deleteFile(`player-${id}-${type}`);
+        // Also remove version with extension
+        const fileField = player && player[type + 'File'];
+        const ext = fileExt(fileField);
+        if (ext) await deleteFile(`player-${id}-${type}${ext}`);
+      }
     }
 
     async function savePlayers() {
@@ -1594,11 +1606,15 @@
           const file = introInput.files[0];
           if (!file) return;
           const onProgress = startProgress(introProgress, introStatus);
+          const ext = fileExt(file.name);
+          const path = `player-${p.id}-intro${ext}`;
+          // Remove old extensionless version too
+          await deleteFile(`player-${p.id}-intro`);
           p.introFile = file.name;
-          const ok = await uploadFile(`player-${p.id}-intro`, file, onProgress);
+          const ok = await uploadFile(path, file, onProgress);
           endProgress(introProgress, introStatus, ok);
           if (ok) {
-            p.introUrl = await signedStorageUrl(`player-${p.id}-intro`);
+            p.introUrl = await signedStorageUrl(path);
             p.introAudio = makeAudio(p.introUrl);
             renderRoster();
             await savePlayerToDB(p);
@@ -1613,11 +1629,15 @@
           const file = songInput.files[0];
           if (!file) return;
           const onProgress = startProgress(songProgress, songStatus);
+          const ext = fileExt(file.name);
+          const path = `player-${p.id}-song${ext}`;
+          // Remove old extensionless version too
+          await deleteFile(`player-${p.id}-song`);
           p.songFile = file.name;
-          const ok = await uploadFile(`player-${p.id}-song`, file, onProgress);
+          const ok = await uploadFile(path, file, onProgress);
           endProgress(songProgress, songStatus, ok);
           if (ok) {
-            p.songUrl = await signedStorageUrl(`player-${p.id}-song`);
+            p.songUrl = await signedStorageUrl(path);
             p.songAudio = makeAudio(p.songUrl);
             renderRoster();
             await savePlayerToDB(p);
@@ -1632,11 +1652,15 @@
           const file = comboInput.files[0];
           if (!file) return;
           const onProgress = startProgress(comboProgress, comboStatus);
+          const ext = fileExt(file.name);
+          const path = `player-${p.id}-combo${ext}`;
+          // Remove old extensionless version too
+          await deleteFile(`player-${p.id}-combo`);
           p.comboFile = file.name;
-          const ok = await uploadFile(`player-${p.id}-combo`, file, onProgress);
+          const ok = await uploadFile(path, file, onProgress);
           endProgress(comboProgress, comboStatus, ok);
           if (ok) {
-            p.comboUrl = await signedStorageUrl(`player-${p.id}-combo`);
+            p.comboUrl = await signedStorageUrl(path);
             p.comboAudio = makeAudio(p.comboUrl);
             renderRoster();
             await savePlayerToDB(p);

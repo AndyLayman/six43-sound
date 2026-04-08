@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v5';
+const CACHE_VERSION = 'v6';
 const APP_CACHE = `app-shell-${CACHE_VERSION}`;
 const AUDIO_CACHE = `audio-${CACHE_VERSION}`;
 
