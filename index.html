@@ -716,7 +716,8 @@
 <body>
 
   <div id="loading-overlay">
-    <img src="logos/Logo-White.svg" alt="Sound" style="height:40px;width:auto;margin-bottom:8px;">
+    <img id="loading-logo" src="logos/Logo-White.svg" alt="Sound" style="height:40px;width:auto;margin-bottom:8px;">
+    <script>try{if(localStorage.getItem('padres-theme')==='light'){document.getElementById('loading-logo').src='logos/Logo-Black.svg';document.body.classList.add('light');}}catch(e){}</script>
     <div class="load-text">Loading sounds...</div>
     <div class="load-progress" id="load-progress"></div>
   </div>
