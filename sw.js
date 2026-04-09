@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v16';
+const CACHE_VERSION = 'v17';
 const APP_CACHE = `app-shell-${CACHE_VERSION}`;
 const AUDIO_CACHE = `audio-${CACHE_VERSION}`;
 
@@ -6,8 +6,8 @@ const AUDIO_CACHE = `audio-${CACHE_VERSION}`;
 const APP_SHELL = [
   '/',
   '/index.html',
-  '/apple-touch-icon.png',
-  '/favicon.png',
+  '/Sound-128-128.png',
+  '/Favicon.png',
   'https://fonts.googleapis.com/css2?family=Montserrat:wght@300&display=swap',
   'https://cdn.jsdelivr.net/npm/iconoir@7/css/iconoir.css',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js'
