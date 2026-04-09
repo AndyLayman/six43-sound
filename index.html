@@ -1110,6 +1110,23 @@
     const FADE_MS = 800; // fade duration in ms
     let fadeInterval = null;
 
+    // ---- Wake Lock (keep screen on while playing) ----
+    let wakeLock = null;
+    async function requestWakeLock() {
+      if (!('wakeLock' in navigator)) return;
+      try {
+        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener('release', () => { wakeLock = null; });
+      } catch (e) { /* wake lock request failed — low battery, etc. */ }
+    }
+    function releaseWakeLock() {
+      if (wakeLock) { wakeLock.release(); wakeLock = null; }
+    }
+    // Re-acquire wake lock when page becomes visible again (iOS releases it on tab switch)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && isPlaying) requestWakeLock();
+    });
+
     // ---- DOM refs ----
     const sfxDrop = document.getElementById('sfx-drop');
     const sfxInput = document.getElementById('sfx-input');
@@ -1909,6 +1926,7 @@
         item.audio.addEventListener('error', onErr);
       }
       isPlaying = true;
+      requestWakeLock();
       setButtonPlaying(item.btn || null);
       updateNowPlaying();
 
@@ -1919,6 +1937,7 @@
         } else {
           clearButtonPlaying();
           isPlaying = false;
+          releaseWakeLock();
           updateNowPlaying();
         }
       };
@@ -1933,6 +1952,7 @@
         if (isPlaying && !audio.paused) {
           fadeOut(audio, () => {
             isPlaying = false;
+            releaseWakeLock();
             if (clearQueue) { playQueue = []; queueIndex = -1; }
             updateNowPlaying();
           });
@@ -1942,6 +1962,7 @@
         audio.currentTime = 0;
       }
       isPlaying = false;
+      releaseWakeLock();
       if (clearQueue) { playQueue = []; queueIndex = -1; }
       updateNowPlaying();
     }
@@ -1954,6 +1975,7 @@
         clearButtonPlaying();
         fadeOut(item.audio, () => {
           isPlaying = false;
+          releaseWakeLock();
           updateNowPlaying();
         }, { resetTime: false });
         isPlaying = false;
@@ -1961,6 +1983,7 @@
         fadeIn(item.audio, 0.05);
         item.audio.play();
         isPlaying = true;
+        requestWakeLock();
         setButtonPlaying(item.btn || null);
       }
       updateNowPlaying();
