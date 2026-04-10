@@ -1198,17 +1198,31 @@
 
     // Single shared audio element for queue playback — avoids autoplay blocking
     const queueAudio = new Audio();
+    queueAudio.crossOrigin = 'anonymous';
 
     // Web Audio API gain node for volume fading (iOS ignores HTMLMediaElement.volume)
     let audioCtx = null;
     let gainNode = null;
+    let audioCtxFailed = false;
     function ensureAudioCtx() {
-      if (audioCtx) return;
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const source = audioCtx.createMediaElementSource(queueAudio);
-      gainNode = audioCtx.createGain();
-      source.connect(gainNode);
-      gainNode.connect(audioCtx.destination);
+      if (audioCtx || audioCtxFailed) return;
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const source = audioCtx.createMediaElementSource(queueAudio);
+        gainNode = audioCtx.createGain();
+        source.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+      } catch(e) {
+        console.warn('Web Audio API failed, falling back to volume:', e);
+        audioCtxFailed = true;
+        audioCtx = null;
+        gainNode = null;
+      }
+    }
+    function getVol() { return gainNode ? gainNode.gain.value : queueAudio.volume; }
+    function setVol(v) {
+      if (gainNode) gainNode.gain.value = v;
+      else queueAudio.volume = v;
     }
 
     // ---- Wake Lock (keep screen on while playing) ----
@@ -1953,28 +1967,25 @@
 
     let fadeInInterval = null;
 
-    function getGain() { return gainNode ? gainNode.gain.value : 1; }
-    function setGain(v) { if (gainNode) gainNode.gain.value = v; }
-
     function fadeOut(audio, cb, { resetTime = true } = {}) {
       if (fadeInInterval) { clearInterval(fadeInInterval); fadeInInterval = null; }
       if (fadeInterval) clearInterval(fadeInterval);
       const steps = 20;
       const stepTime = FADE_MS / steps;
-      let vol = getGain();
+      let vol = getVol();
       const dec = vol / steps;
       fadeInterval = setInterval(() => {
         vol -= dec;
         if (vol <= 0.01) {
           clearInterval(fadeInterval);
           fadeInterval = null;
-          setGain(0);
+          setVol(0);
           audio.pause();
           if (resetTime) audio.currentTime = 0;
-          setGain(1);
+          setVol(1);
           if (cb) cb();
         } else {
-          setGain(vol);
+          setVol(vol);
         }
       }, stepTime);
     }
@@ -1982,7 +1993,7 @@
     function fadeIn(audio) {
       if (fadeInInterval) { clearInterval(fadeInInterval); fadeInInterval = null; }
       if (fadeInterval) { clearInterval(fadeInterval); fadeInterval = null; }
-      setGain(0);
+      setVol(0);
       const steps = 20;
       const stepTime = FADE_MS / steps;
       const inc = 1 / steps;
@@ -1992,9 +2003,9 @@
         if (vol >= 1) {
           clearInterval(fadeInInterval);
           fadeInInterval = null;
-          setGain(1);
+          setVol(1);
         } else {
-          setGain(vol);
+          setVol(vol);
         }
       }, stepTime);
     }
@@ -2032,10 +2043,12 @@
         updateNowPlaying();
         return;
       }
-      ensureAudioCtx();
-      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
       const item = playQueue[queueIndex];
       const src = item.audio ? item.audio.src : item.src;
+
+      // Init Web Audio API on first user-gesture-triggered play
+      ensureAudioCtx();
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
 
       // Use the shared queueAudio element — same element = no autoplay block
       // IMPORTANT: do NOT call .load() — it re-locks the autoplay gate on iOS/Safari.
@@ -2043,7 +2056,7 @@
       queueAudio.pause();
       queueAudio.src = src;
       queueAudio.currentTime = 0;
-      setGain(0);
+      setVol(0);
 
       function attemptPlay() {
         queueAudio.play().then(() => fadeIn(queueAudio)).catch(e => {
@@ -2187,14 +2200,14 @@
     function skipNext() {
       if (playQueue.length === 0) return;
       if (fadeInterval) { clearInterval(fadeInterval); fadeInterval = null; }
-      queueAudio.pause(); queueAudio.currentTime = 0; setGain(1);
+      queueAudio.pause(); queueAudio.currentTime = 0; setVol(1);
       advanceQueue();
     }
 
     function skipPrev() {
       if (playQueue.length === 0) return;
       if (fadeInterval) { clearInterval(fadeInterval); fadeInterval = null; }
-      queueAudio.pause(); queueAudio.currentTime = 0; setGain(1);
+      queueAudio.pause(); queueAudio.currentTime = 0; setVol(1);
       queueIndex = Math.max(0, queueIndex - 1);
       playCurrentInQueue();
     }
