@@ -855,7 +855,7 @@
 
       <div id="queue-section" class="queue-section" style="display:none;">
         <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;">
-          <span>Up Next</span>
+          <span>Queue</span>
           <button class="small-btn danger" id="clear-queue-btn" style="font-size:var(--text-xs);">Clear</button>
         </div>
         <div id="queue-list" class="queue-list"></div>
@@ -1420,9 +1420,23 @@
     });
 
     function renderQueue() {
-      const upcoming = playQueue.filter((_, i) => i > queueIndex);
-      queueSection.style.display = upcoming.length ? '' : 'none';
+      const hasQueue = playQueue.length > 0 && queueIndex >= 0;
+      queueSection.style.display = hasQueue ? '' : 'none';
       queueListEl.innerHTML = '';
+
+      // Show currently playing item at top
+      if (queueIndex >= 0 && queueIndex < playQueue.length) {
+        const current = playQueue[queueIndex];
+        const div = document.createElement('div');
+        div.className = 'queue-item current';
+        div.innerHTML = `
+          <span class="queue-drag" style="visibility:hidden;"><i class="iconoir-drag" style="font-size:14px;"></i></span>
+          <span class="queue-pos" style="color:var(--clay);"><i class="iconoir-play" style="font-size:10px;"></i></span>
+          <span class="queue-name" style="color:var(--clay);font-weight:600;">${current.name || 'Unknown'}</span>
+        `;
+        queueListEl.appendChild(div);
+      }
+
       playQueue.forEach((item, i) => {
         if (i <= queueIndex) return;
         const div = document.createElement('div');
