@@ -2290,15 +2290,20 @@
       }
     }, 250);
 
-    // When page wakes from background (screen on), catch up on ended tracks
+    // When page wakes from background, resume AudioContext and catch up on ended tracks
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && isPlaying && queueIndex >= 0 && queueIndex < playQueue.length) {
-        if (queueAudio.ended) {
-          if (repeatMode === 'one') {
-            queueAudio.currentTime = 0;
-            queueAudio.play().catch(() => {});
-          } else {
-            advanceQueue();
+      if (document.visibilityState === 'visible') {
+        // Resume AudioContext — iOS suspends it when backgrounded
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+
+        if (isPlaying && queueIndex >= 0 && queueIndex < playQueue.length) {
+          if (queueAudio.ended) {
+            if (repeatMode === 'one') {
+              queueAudio.currentTime = 0;
+              queueAudio.play().catch(() => {});
+            } else {
+              advanceQueue();
+            }
           }
         }
       }
