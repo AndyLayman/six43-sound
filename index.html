@@ -2458,6 +2458,21 @@
           .order('batting_order');
         liveState.lineup = lineup || [];
 
+        // Reorder the players array to match the game's batting order
+        // Players in the lineup come first (in batting order), others follow
+        if (liveState.lineup.length > 0) {
+          const lineupOrder = new Map(liveState.lineup.map((e, i) => [e.player_id, i]));
+          players.sort((a, b) => {
+            const aInLineup = lineupOrder.has(a.id);
+            const bInLineup = lineupOrder.has(b.id);
+            if (aInLineup && bInLineup) return lineupOrder.get(a.id) - lineupOrder.get(b.id);
+            if (aInLineup) return -1;
+            if (bInLineup) return 1;
+            return 0;
+          });
+          renderPlayPage();
+        }
+
         updateBatterDisplay();
 
         // Subscribe to realtime changes (only if not already subscribed to this game)
