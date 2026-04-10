@@ -2015,11 +2015,12 @@
       const src = item.audio ? item.audio.src : item.src;
 
       // Use the shared queueAudio element — same element = no autoplay block
+      // IMPORTANT: do NOT call .load() — it re-locks the autoplay gate on iOS/Safari.
+      // Setting .src is enough; the browser loads the new resource automatically.
       queueAudio.pause();
       queueAudio.src = src;
       queueAudio.currentTime = 0;
       queueAudio.volume = 0;
-      queueAudio.load();
 
       function attemptPlay() {
         queueAudio.play().then(() => fadeIn(queueAudio)).catch(e => {
