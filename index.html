@@ -578,11 +578,11 @@
     #live-batter-banner.visible { display: flex; align-items: center; }
     #live-batter-banner .batter-slot { flex: 1; display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
     #live-batter-banner .batter-tag {
-      font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
-      padding: 2px 6px; border-radius: var(--r-1); white-space: nowrap; flex-shrink: 0;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+      padding: 2px 8px; border-radius: 9999px; white-space: nowrap; flex-shrink: 0;
     }
     #live-batter-banner .batter-tag.at-bat { background: var(--clay); color: var(--black); }
-    #live-batter-banner .batter-tag.on-deck { background: var(--gray-700); color: var(--text-muted); }
+    #live-batter-banner .batter-tag.on-deck { background: transparent; color: var(--text-muted); border: 1px solid var(--gray-600); }
     #live-batter-banner .batter-tag.defense { background: var(--gray-700); color: var(--text-muted); }
     #live-batter-banner .batter-name {
       font-size: var(--text-sm); font-weight: 500; color: var(--text);
@@ -819,7 +819,7 @@
         <div class="section-title">Lineup</div>
         <div id="live-batter-banner">
           <div class="batter-slot" id="at-bat-slot">
-            <span class="batter-tag at-bat">At Bat</span>
+            <span class="batter-tag at-bat">Batting</span>
             <span class="batter-number" id="at-bat-number"></span>
             <span class="batter-name" id="at-bat-name"></span>
           </div>
@@ -2478,7 +2478,7 @@
       const onDeckPlayer = players.find(p => p.id === onDeckEntry.player_id);
 
       if (atBatPlayer) {
-        atBatSlot.innerHTML = `<span class="batter-tag at-bat">At Bat</span><span class="batter-number">#${esc(atBatPlayer.number)}</span><span class="batter-name">${esc(atBatPlayer.firstName)} ${esc(atBatPlayer.lastName)}</span>`;
+        atBatSlot.innerHTML = `<span class="batter-tag at-bat">Batting</span><span class="batter-number">#${esc(atBatPlayer.number)}</span><span class="batter-name">${esc(atBatPlayer.firstName)} ${esc(atBatPlayer.lastName)}</span>`;
         const card = document.querySelector(`.lineup-card[data-player-id="${atBatPlayer.id}"]`);
         if (card) card.classList.add('at-bat');
       }
