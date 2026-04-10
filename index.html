@@ -1197,9 +1197,28 @@
 
     // Single shared audio element for queue playback — avoids autoplay blocking
     const queueAudio = new Audio();
+    queueAudio.crossOrigin = 'anonymous';
 
-    function getVol() { return queueAudio.volume; }
-    function setVol(v) { queueAudio.volume = v; }
+    // Web Audio API for fading (iOS ignores audio.volume)
+    let audioCtx = null;
+    let gainNode = null;
+    function ensureAudioCtx() {
+      if (audioCtx) return;
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const source = audioCtx.createMediaElementSource(queueAudio);
+        gainNode = audioCtx.createGain();
+        source.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+      } catch(e) {
+        console.warn('AudioContext failed:', e);
+      }
+    }
+    function getVol() { return gainNode ? gainNode.gain.value : queueAudio.volume; }
+    function setVol(v) {
+      if (gainNode) gainNode.gain.value = v;
+      else queueAudio.volume = v;
+    }
 
     // ---- Wake Lock (keep screen on while playing) ----
     let wakeLock = null;
@@ -2014,6 +2033,8 @@
         updateNowPlaying();
         return;
       }
+      ensureAudioCtx();
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
       const item = playQueue[queueIndex];
       const src = item.audio ? item.audio.src : item.src;
 
@@ -2263,9 +2284,20 @@
       }
     }, 250);
 
-    // When page wakes from background, resume AudioContext and catch up on ended tracks
+    // When page wakes from background, resume AudioContext and resume playback
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
+        // Resume AudioContext — iOS suspends it when backgrounded
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume().then(() => {
+            // If audio was supposed to be playing, make sure it resumes
+            if (isPlaying && queueIndex >= 0 && queueIndex < playQueue.length && queueAudio.paused) {
+              setVol(1);
+              queueAudio.play().catch(() => {});
+            }
+          });
+        }
+
         if (isPlaying && queueIndex >= 0 && queueIndex < playQueue.length) {
           if (queueAudio.ended) {
             if (repeatMode === 'one') {
@@ -2274,6 +2306,10 @@
             } else {
               advanceQueue();
             }
+          } else if (queueAudio.paused) {
+            // AudioContext suspension paused it — resume from where it left off
+            setVol(1);
+            queueAudio.play().catch(() => {});
           }
         }
       }
