@@ -993,6 +993,42 @@
 
     const STORAGE_BUCKET = 'media';
 
+    // ---- Namecheap-hosted audio (reduces Supabase egress) ----
+    const MEDIA_HOST = 'https://www.layman-design.com/six43';
+    const MEDIA_KEY = '1271akandfvkla akljskljldskaj lkajsdflakldjlkfjaljkhlkdsaj d safsa fassdfdasfds';
+
+    function audioUrl(filename) {
+      return `${MEDIA_HOST}/audio/${filename}`;
+    }
+
+    async function uploadAudioFile(filename, file, onProgress) {
+      return new Promise((resolve) => {
+        const form = new FormData();
+        form.append('file', file);
+        form.append('filename', filename);
+        form.append('key', MEDIA_KEY);
+        const xhr = new XMLHttpRequest();
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total);
+        });
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            if (onProgress) onProgress(1);
+            resolve(true);
+          } else {
+            console.error('Audio upload error:', filename, xhr.status, xhr.responseText);
+            resolve(false);
+          }
+        });
+        xhr.addEventListener('error', () => {
+          console.error('Audio upload network error:', filename);
+          resolve(false);
+        });
+        xhr.open('POST', `${MEDIA_HOST}/upload.php`);
+        xhr.send(form);
+      });
+    }
+
     function storageUrl(path) {
       return `${SUPABASE_URL}/storage/v1/object/public/${STORAGE_BUCKET}/${path}`;
     }
@@ -1143,26 +1179,12 @@
 
     // ---- Load all data ----
     async function loadAllData() {
-      // List actual storage files to handle naming variations (some files have extensions, some don't)
-      const { data: storageFiles } = await sb.storage.from(STORAGE_BUCKET).list('', { limit: 1000 });
-      const storageFileNames = new Set((storageFiles || []).map(f => f.name));
-
-      // Find the correct storage path — prefers files with extension, falls back to extensionless
-      function resolveStoragePath(basePath, originalFileName) {
-        if (originalFileName) {
-          const ext = (originalFileName.match(/\.[^.]+$/) || [''])[0];
-          if (ext && storageFileNames.has(basePath + ext)) return basePath + ext;
-        }
-        if (storageFileNames.has(basePath)) return basePath;
-        return basePath;
-      }
-
-      // Load sounds
+      // Load sounds (served from Namecheap)
       const { data: soundRows } = await sb.from('sounds').select('*').order('sort_order');
       if (soundRows) {
         for (const s of soundRows) {
-          const path = resolveStoragePath(`sfx-${s.id}`, s.file_name);
-          const url = await signedStorageUrl(path);
+          const ext = fileExt(s.file_name);
+          const url = audioUrl(`sfx-${s.id}${ext}`);
           const entry = { id: s.id, fileName: s.file_name, label: s.label, url, audio: makeAudio(url) };
           sounds.push(entry);
           renderSfxItem(entry);
@@ -1184,8 +1206,8 @@
           if (p.photo_file) player.photoUrl = storageUrl(`player-${p.id}-photo`);
           for (const type of ['intro', 'song', 'combo']) {
             if (p[type + '_file']) {
-              const storagePath = resolveStoragePath(`player-${p.id}-${type}`, p[type + '_file']);
-              const fileUrl = await signedStorageUrl(storagePath);
+              const ext = fileExt(p[type + '_file']);
+              const fileUrl = audioUrl(`player-${p.id}-${type}${ext}`);
               player[type + 'Url'] = fileUrl;
               player[type + 'Audio'] = makeAudio(fileUrl);
             }
@@ -1384,14 +1406,14 @@
       saveBtn.textContent = 'Uploading...';
 
       const ext = fileExt(file.name);
-      const libPath = `library-${id}${ext}`;
-      const uploaded = await uploadFile(libPath, file);
+      const libFilename = `library-${id}${ext}`;
+      const uploaded = await uploadAudioFile(libFilename, file);
       if (!uploaded) { saveBtn.disabled = false; saveBtn.textContent = 'Upload'; return showToast('Upload failed', 'error'); }
 
       const { error } = await sb.from('library').insert({ id, title, artist, category, file_name: file.name, sort_order: librarySongs.length });
       if (error) { console.error('Save song error:', error); saveBtn.disabled = false; saveBtn.textContent = 'Upload'; return showToast('Save failed: ' + error.message, 'error'); }
 
-      const url = await signedStorageUrl(libPath);
+      const url = audioUrl(libFilename);
       librarySongs.push({ id, title, artist, category, fileName: file.name, url, audio: makeAudio(url) });
       renderLibrary();
       addSongModal.classList.remove('visible');
@@ -1539,20 +1561,9 @@
       const { data, error } = await sb.from('library').select('*').order('sort_order');
       if (error) { console.error('Load library error:', error); return; }
       if (data) {
-        // List storage files to resolve paths with extensions
-        const { data: storageFiles } = await sb.storage.from(STORAGE_BUCKET).list('', { limit: 1000 });
-        const storageFileNames = new Set((storageFiles || []).map(f => f.name));
-        function resolveLibPath(basePath, originalFileName) {
-          if (originalFileName) {
-            const ext = (originalFileName.match(/\.[^.]+$/) || [''])[0];
-            if (ext && storageFileNames.has(basePath + ext)) return basePath + ext;
-          }
-          if (storageFileNames.has(basePath)) return basePath;
-          return basePath;
-        }
         for (const s of data) {
-          const path = resolveLibPath(`library-${s.id}`, s.file_name);
-          const url = await signedStorageUrl(path);
+          const ext = fileExt(s.file_name);
+          const url = audioUrl(`library-${s.id}${ext}`);
           librarySongs.push({ id: s.id, title: s.title, artist: s.artist || '', category: s.category || 'other', fileName: s.file_name, url, audio: makeAudio(url) });
         }
       }
@@ -1578,9 +1589,9 @@
         }).select().single();
         if (error || !data) { console.error('Insert sound error:', error); continue; }
         const ext = fileExt(file.name);
-        const sfxPath = `sfx-${data.id}${ext}`;
-        await uploadFile(sfxPath, file);
-        const url = await signedStorageUrl(sfxPath);
+        const sfxFilename = `sfx-${data.id}${ext}`;
+        await uploadAudioFile(sfxFilename, file);
+        const url = audioUrl(sfxFilename);
         const entry = { id: data.id, fileName: data.file_name, label: data.label, url, audio: makeAudio(url) };
         sounds.push(entry);
         renderSfxItem(entry);
@@ -1759,14 +1770,12 @@
           if (!file) return;
           const onProgress = startProgress(introProgress, introStatus);
           const ext = fileExt(file.name);
-          const path = `player-${p.id}-intro${ext}`;
-          // Remove old extensionless version too
-          await deleteFile(`player-${p.id}-intro`);
+          const filename = `player-${p.id}-intro${ext}`;
           p.introFile = file.name;
-          const ok = await uploadFile(path, file, onProgress);
+          const ok = await uploadAudioFile(filename, file, onProgress);
           endProgress(introProgress, introStatus, ok);
           if (ok) {
-            p.introUrl = await signedStorageUrl(path);
+            p.introUrl = audioUrl(filename);
             p.introAudio = makeAudio(p.introUrl);
             renderRoster();
             await savePlayerToDB(p);
@@ -1782,14 +1791,12 @@
           if (!file) return;
           const onProgress = startProgress(songProgress, songStatus);
           const ext = fileExt(file.name);
-          const path = `player-${p.id}-song${ext}`;
-          // Remove old extensionless version too
-          await deleteFile(`player-${p.id}-song`);
+          const filename = `player-${p.id}-song${ext}`;
           p.songFile = file.name;
-          const ok = await uploadFile(path, file, onProgress);
+          const ok = await uploadAudioFile(filename, file, onProgress);
           endProgress(songProgress, songStatus, ok);
           if (ok) {
-            p.songUrl = await signedStorageUrl(path);
+            p.songUrl = audioUrl(filename);
             p.songAudio = makeAudio(p.songUrl);
             renderRoster();
             await savePlayerToDB(p);
@@ -1805,14 +1812,12 @@
           if (!file) return;
           const onProgress = startProgress(comboProgress, comboStatus);
           const ext = fileExt(file.name);
-          const path = `player-${p.id}-combo${ext}`;
-          // Remove old extensionless version too
-          await deleteFile(`player-${p.id}-combo`);
+          const filename = `player-${p.id}-combo${ext}`;
           p.comboFile = file.name;
-          const ok = await uploadFile(path, file, onProgress);
+          const ok = await uploadAudioFile(filename, file, onProgress);
           endProgress(comboProgress, comboStatus, ok);
           if (ok) {
-            p.comboUrl = await signedStorageUrl(path);
+            p.comboUrl = audioUrl(filename);
             p.comboAudio = makeAudio(p.comboUrl);
             renderRoster();
             await savePlayerToDB(p);
