@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v41';
+const CACHE_VERSION = 'v42';
 const APP_CACHE = `app-shell-${CACHE_VERSION}`;
 const AUDIO_CACHE = `audio-${CACHE_VERSION}`;
 
@@ -15,6 +15,10 @@ const APP_SHELL = [
 
 function isStorageUrl(url) {
   return url.includes('supabase.co') && url.includes('/storage/v1/object/');
+}
+
+function isMediaHostUrl(url) {
+  return url.includes('layman-design.com/six43');
 }
 
 // Install — cache app shell
@@ -51,6 +55,24 @@ self.addEventListener('fetch', event => {
         return response;
       }).catch(() =>
         // Offline — try cache
+        caches.open(AUDIO_CACHE).then(cache => cache.match(event.request)).then(cached =>
+          cached || new Response('Audio not available offline', { status: 503 })
+        )
+      )
+    );
+    return;
+  }
+
+  // Namecheap media host (audio) — network first, cache fallback
+  if (isMediaHostUrl(url)) {
+    event.respondWith(
+      fetch(event.request).then(response => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(AUDIO_CACHE).then(cache => cache.put(event.request, clone));
+        }
+        return response;
+      }).catch(() =>
         caches.open(AUDIO_CACHE).then(cache => cache.match(event.request)).then(cached =>
           cached || new Response('Audio not available offline', { status: 503 })
         )
