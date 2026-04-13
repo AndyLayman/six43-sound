@@ -2420,8 +2420,12 @@
     // ---- Live Batter Sync ----
     let liveState = { gameId: null, lineup: [], currentBatterIndex: 0, currentHalf: 'top', currentInning: 1 };
     let liveSyncChannel = null;
+    let lastSyncTime = 0;
 
-    async function initLiveSync() {
+    async function initLiveSync(force = false) {
+      const now = Date.now();
+      if (!force && now - lastSyncTime < 10000) return; // debounce: skip if synced <10s ago
+      lastSyncTime = now;
       try {
         // First, check for an explicitly in-progress game
         let gameId = null;
