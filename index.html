@@ -1181,7 +1181,7 @@
             songFile: p.song_file || null, songUrl: null, songAudio: null,
             comboFile: p.combo_file || null, comboUrl: null, comboAudio: null
           };
-          if (p.photo_file) player.photoUrl = storageUrl(`player-${p.id}-photo`) + '?t=' + Date.now();
+          if (p.photo_file) player.photoUrl = storageUrl(`player-${p.id}-photo`);
           for (const type of ['intro', 'song', 'combo']) {
             if (p[type + '_file']) {
               const storagePath = resolveStoragePath(`player-${p.id}-${type}`, p[type + '_file']);
@@ -1744,7 +1744,7 @@
           const ok = await uploadFile(`player-${p.id}-photo`, blob, onProgress);
           endProgress(photoProgress, photoStatus, ok);
           if (ok) {
-            p.photoUrl = storageUrl(`player-${p.id}-photo`) + '?t=' + Date.now();
+            p.photoUrl = storageUrl(`player-${p.id}-photo`);
             renderRoster();
             await savePlayerToDB(p);
           }
