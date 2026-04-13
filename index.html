@@ -998,14 +998,18 @@
     const MEDIA_KEY = '1271akandfvkla akljskljldskaj lkajsdflakldjlkfjaljkhlkdsaj d safsa fassdfdasfds';
 
     function audioUrl(filename) {
-      return `${MEDIA_HOST}/audio/${filename}`;
+      // Files on Namecheap are stored without extensions (matching old Supabase naming)
+      const noExt = filename.replace(/\.[^.]+$/, '');
+      return `${MEDIA_HOST}/audio/${noExt}`;
     }
 
     async function uploadAudioFile(filename, file, onProgress) {
+      // Strip extension to match existing naming convention
+      const noExt = filename.replace(/\.[^.]+$/, '');
       return new Promise((resolve) => {
         const form = new FormData();
         form.append('file', file);
-        form.append('filename', filename);
+        form.append('filename', noExt);
         form.append('key', MEDIA_KEY);
         const xhr = new XMLHttpRequest();
         xhr.upload.addEventListener('progress', (e) => {
