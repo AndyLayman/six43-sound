@@ -45,15 +45,28 @@ export function fileExt(name: string | null): string {
   return m ? m[0] : '';
 }
 
+let _mediaKeyCache: string | null = null;
+
+async function getMediaKey(): Promise<string> {
+  if (_mediaKeyCache) return _mediaKeyCache;
+  const res = await fetch('/api/upload-audio');
+  const data = await res.json();
+  if (!data.key) throw new Error('Failed to get upload key');
+  _mediaKeyCache = data.key;
+  return data.key;
+}
+
 export async function uploadAudioFile(
   filename: string,
   file: File,
   onProgress?: (pct: number) => void
 ): Promise<boolean> {
+  const key = await getMediaKey();
   return new Promise((resolve) => {
     const form = new FormData();
     form.append('file', file);
     form.append('filename', filename);
+    form.append('key', key);
     const xhr = new XMLHttpRequest();
     xhr.upload.addEventListener('progress', (e) => {
       if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total);
@@ -71,7 +84,7 @@ export async function uploadAudioFile(
       console.error('Audio upload network error:', filename);
       resolve(false);
     });
-    xhr.open('POST', '/api/upload-audio');
+    xhr.open('POST', `${MEDIA_HOST}/upload.php`);
     xhr.send(form);
   });
 }
