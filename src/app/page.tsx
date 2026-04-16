@@ -1,7 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAudio } from '@/hooks/use-audio';
+import { useAuth } from '@/hooks/use-auth';
 import { useLiveGame } from '@/hooks/use-live-game';
 import {
   sb,
@@ -74,6 +76,16 @@ function useToast() {
 }
 
 export default function SoundboardPage() {
+  const router = useRouter();
+  const { user, loading: authLoading, signOut } = useAuth();
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace('/login');
+    }
+  }, [authLoading, user, router]);
+
   // --- Data state ---
   const [sounds, setSounds] = useState<Sound[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
@@ -471,6 +483,16 @@ export default function SoundboardPage() {
     : librarySongs;
 
   // --- Render ---
+  if (authLoading || !user) {
+    return (
+      <div className="loading-overlay">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logos/Logo-White.svg" alt="Sound" style={{ height: 40, width: 'auto', marginBottom: 8 }} />
+        <div className="load-text">Checking authentication...</div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="loading-overlay">
@@ -501,6 +523,7 @@ export default function SoundboardPage() {
       <nav className={settingsOpen ? 'visible' : ''}>
         <button className={settingsPage === 'upload' ? 'active' : ''} onClick={() => setSettingsPage('upload')}>Upload</button>
         <button className={settingsPage === 'roster' ? 'active' : ''} onClick={() => setSettingsPage('roster')}>Roster</button>
+        <button onClick={signOut} style={{ color: 'var(--danger)' }}>Sign Out</button>
       </nav>
 
       {/* Main Tabs */}
