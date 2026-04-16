@@ -40,6 +40,29 @@ const AudioContext = createContext<AudioContextValue | null>(null);
 
 const FADE_MS = 800;
 
+export interface AudioErrorDetail {
+  message: string;
+  title?: string;
+  url?: string;
+  code?: number;
+}
+
+function mediaErrorText(code: number | undefined): string {
+  switch (code) {
+    case 1: return 'aborted';
+    case 2: return 'network error';
+    case 3: return 'decode error';
+    case 4: return 'file not found or unsupported';
+    default: return 'unknown error';
+  }
+}
+
+function emitAudioError(detail: AudioErrorDetail) {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent<AudioErrorDetail>('audio:error', { detail }));
+  }
+}
+
 export function AudioProvider({ children }: { children: ReactNode }) {
   const [playQueue, setPlayQueue] = useState<QueueItem[]>([]);
   const [queueIndex, setQueueIndex] = useState(-1);
@@ -206,6 +229,11 @@ export function AudioProvider({ children }: { children: ReactNode }) {
             return;
           }
           console.error('Play error:', e);
+          emitAudioError({
+            message: `Play failed: ${e?.message || e?.name || 'unknown'}`,
+            title: item.label || item.name,
+            url: item.url,
+          });
         });
       };
 
@@ -220,7 +248,14 @@ export function AudioProvider({ children }: { children: ReactNode }) {
         const onErr = () => {
           audio.removeEventListener('canplay', onReady);
           audio.removeEventListener('error', onErr);
-          console.error('Audio load error');
+          const code = audio.error?.code;
+          console.error('Audio load error', { code, url: item.url });
+          emitAudioError({
+            message: `Couldn't load audio (${mediaErrorText(code)})`,
+            title: item.label || item.name,
+            url: item.url,
+            code,
+          });
         };
         audio.addEventListener('canplay', onReady);
         audio.addEventListener('error', onErr);

@@ -201,31 +201,54 @@ export default function SoundboardPage() {
           setLibrarySongs(loadedLibrary);
 
           // Preload audio
-          const allUrls = [
-            ...loadedSounds.map((s) => s.url),
-            ...loadedPlayers.flatMap((p) => [p.introUrl, p.songUrl, p.comboUrl].filter(Boolean) as string[]),
-            ...loadedLibrary.map((s) => s.url),
+          const allItems: { url: string; title: string }[] = [
+            ...loadedSounds.map((s) => ({ url: s.url, title: s.label || s.fileName || 'SFX' })),
+            ...loadedPlayers.flatMap((p) =>
+              [
+                p.introUrl ? { url: p.introUrl, title: `${p.name} — intro` } : null,
+                p.songUrl ? { url: p.songUrl, title: `${p.name} — walk-up` } : null,
+                p.comboUrl ? { url: p.comboUrl, title: `${p.name} — combo` } : null,
+              ].filter(Boolean) as { url: string; title: string }[]
+            ),
+            ...loadedLibrary.map((s) => ({ url: s.url, title: s.title })),
           ];
           let loaded = 0;
-          setLoadProgress(`0 / ${allUrls.length}`);
+          const failed: string[] = [];
+          setLoadProgress(`0 / ${allItems.length}`);
 
           await Promise.race([
             Promise.all(
-              allUrls.map(
-                (url) =>
+              allItems.map(
+                (it) =>
                   new Promise<void>((resolve) => {
-                    const a = new Audio(url);
+                    const a = new Audio(it.url);
                     a.preload = 'auto';
                     const timeout = setTimeout(resolve, 5000);
-                    const done = () => { clearTimeout(timeout); loaded++; setLoadProgress(`${loaded} / ${allUrls.length}`); resolve(); };
-                    a.addEventListener('canplay', done, { once: true });
-                    a.addEventListener('error', done, { once: true });
+                    const ok = () => {
+                      clearTimeout(timeout);
+                      loaded++;
+                      setLoadProgress(`${loaded} / ${allItems.length}`);
+                      resolve();
+                    };
+                    const err = () => {
+                      clearTimeout(timeout);
+                      failed.push(it.title);
+                      resolve();
+                    };
+                    a.addEventListener('canplay', ok, { once: true });
+                    a.addEventListener('error', err, { once: true });
                     a.load();
                   })
               )
             ),
             new Promise<void>((resolve) => setTimeout(resolve, 15000)),
           ]);
+
+          if (failed.length) {
+            const preview = failed.slice(0, 3).join(', ');
+            const more = failed.length > 3 ? ` (+${failed.length - 3} more)` : '';
+            showToast(`Failed to load ${failed.length}: ${preview}${more}`, 'error');
+          }
 
           setLoading(false);
         }
@@ -238,7 +261,7 @@ export default function SoundboardPage() {
     setLoading(true);
     loadAll();
     return () => { cancelled = true; };
-  }, [activeTeam]);
+  }, [activeTeam, showToast]);
 
   // --- Staging badge ---
   useEffect(() => {
@@ -257,6 +280,17 @@ export default function SoundboardPage() {
       window.removeEventListener('offline', onOffline);
       window.removeEventListener('online', onOnline);
     };
+  }, [showToast]);
+
+  // --- Audio error toasts ---
+  useEffect(() => {
+    const onAudioError = (e: Event) => {
+      const detail = (e as CustomEvent<{ message: string; title?: string; url?: string; code?: number }>).detail;
+      const prefix = detail.title ? `${detail.title}: ` : '';
+      showToast(`${prefix}${detail.message}`, 'error');
+    };
+    window.addEventListener('audio:error', onAudioError);
+    return () => window.removeEventListener('audio:error', onAudioError);
   }, [showToast]);
 
   // --- Settings nav ---
