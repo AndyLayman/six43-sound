@@ -558,7 +558,7 @@ export default function SoundboardPage() {
   }
 
   return (
-    <div className="app-shell">
+    <>
       {/* Header */}
       <header style={{ background: 'var(--bg-deep)', textAlign: 'center', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, position: 'relative', borderBottom: '1px solid var(--border)' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1032,6 +1032,6 @@ export default function SoundboardPage() {
           <div key={t.id} className={`toast ${t.type}`}>{t.message}</div>
         ))}
       </div>
-    </div>
+    </>
   );
 }

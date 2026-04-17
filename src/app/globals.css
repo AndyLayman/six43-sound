@@ -121,24 +121,12 @@ body.light {
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
-html, body { height: 100%; }
-html { background: var(--bg-deep); }
 body {
   font-family: var(--font);
   font-weight: var(--font-weight);
   font-size: var(--text-base);
-  background: var(--bg-deep); color: var(--text);
-  overflow: hidden;
-}
-
-.app-shell {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100vw;
-  height: 100vh;
-  height: 100dvh;
-  display: flex; flex-direction: column;
-  background: var(--bg);
+  background: var(--bg); color: var(--text);
+  min-height: 100vh; display: flex; flex-direction: column;
 }
 
 /* --- Settings Cog --- */
@@ -194,7 +182,7 @@ nav button:hover:not(.active) { color: var(--text-muted); }
 .tab-content.active { display: block; animation: fadeIn var(--duration-base) var(--ease-out); }
 
 /* --- Pages --- */
-.page { display: none; flex: 1; padding: var(--sp-4); overflow-y: auto; min-height: 0; }
+.page { display: none; flex: 1; padding: var(--sp-4); overflow-y: auto; padding-bottom: 120px; }
 .page.active { display: block; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -610,9 +598,10 @@ nav button:hover:not(.active) { color: var(--text-muted); }
 
 /* --- Now Playing Bar --- */
 .now-playing {
-  position: relative; flex-shrink: 0;
+  position: fixed; bottom: 0; left: 0; right: 0;
   border-top: 1px solid var(--border);
   padding: 10px var(--sp-4); padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
   background: var(--bg-deep);
 }
 .now-playing .np-row { display: flex; align-items: center; gap: var(--sp-3); }
@@ -713,7 +702,7 @@ nav button:hover:not(.active) { color: var(--text-muted); }
 /* --- Mobile Optimizations --- */
 @media (max-width: 600px) {
   nav button { padding: 12px var(--sp-2); font-size: var(--text-sm); }
-  .page { padding: var(--sp-3); }
+  .page { padding: var(--sp-3); padding-bottom: 130px; }
 
   header { padding: 10px 12px !important; }
   header svg { height: 32px !important; }
