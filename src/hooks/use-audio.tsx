@@ -16,14 +16,16 @@ interface AudioContextValue {
   playQueue: QueueItem[];
   queueIndex: number;
   isPlaying: boolean;
+  isPriorityPlaying: boolean;
   isShuffle: boolean;
   repeatMode: RepeatMode;
   currentTime: number;
   duration: number;
   activeBtnId: string | null;
+  currentTrackName: string | null;
 
   // Actions
-  playFromQueue: (queue: QueueItem[]) => void;
+  priorityPlay: (item: QueueItem) => void;
   addToQueue: (item: QueueItem) => void;
   togglePlayPause: () => void;
   skipNext: () => void;
@@ -36,7 +38,7 @@ interface AudioContextValue {
   clearQueue: () => void;
 }
 
-const AudioContext = createContext<AudioContextValue | null>(null);
+const AudioCtx = createContext<AudioContextValue | null>(null);
 
 const FADE_MS = 800;
 
@@ -64,14 +66,17 @@ function emitAudioError(detail: AudioErrorDetail) {
 }
 
 export function AudioProvider({ children }: { children: ReactNode }) {
+  // Queue state
   const [playQueue, setPlayQueue] = useState<QueueItem[]>([]);
   const [queueIndex, setQueueIndex] = useState(-1);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isPriorityPlaying, setIsPriorityPlaying] = useState(false);
   const [isShuffle, setIsShuffle] = useState(false);
   const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [activeBtnId, setActiveBtnId] = useState<string | null>(null);
+  const [currentTrackName, setCurrentTrackName] = useState<string | null>(null);
 
   const queueAudioRef = useRef<HTMLAudioElement | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -79,6 +84,11 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const fadeRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fadeInRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+
+  // Priority play state: when a priority track ends, resume queue
+  const priorityRef = useRef(false);
+  // Saved queue position to resume after priority play
+  const savedQueuePosRef = useRef<{ wasPlaying: boolean; time: number } | null>(null);
 
   // Mutable refs for latest state in callbacks
   const queueRef = useRef(playQueue);
@@ -206,74 +216,91 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     return copy;
   }
 
-  const playCurrentInQueueInternal = useCallback(
-    (queue: QueueItem[], idx: number) => {
-      const audio = queueAudioRef.current;
-      if (!audio || idx < 0 || idx >= queue.length) {
-        setIsPlaying(false);
-        return;
-      }
-      ensureAudioCtx();
-      if (audioCtxRef.current?.state === 'suspended') audioCtxRef.current.resume();
+  function playTrack(item: QueueItem) {
+    const audio = queueAudioRef.current;
+    if (!audio) return;
+    ensureAudioCtx();
+    if (audioCtxRef.current?.state === 'suspended') audioCtxRef.current.resume();
 
-      const item = queue[idx];
-      audio.pause();
-      audio.src = item.url;
-      audio.currentTime = 0;
-      setVol(0);
+    audio.pause();
+    audio.src = item.url;
+    audio.currentTime = 0;
+    setVol(0);
 
-      const attemptPlay = () => {
-        audio.play().then(() => fadeIn()).catch((e) => {
-          if (e.name === 'NotAllowedError') {
-            setIsPlaying(false);
-            return;
-          }
-          console.error('Play error:', e);
-          emitAudioError({
-            message: `Play failed: ${e?.message || e?.name || 'unknown'}`,
-            title: item.label || item.name,
-            url: item.url,
-          });
+    const attemptPlay = () => {
+      audio.play().then(() => fadeIn()).catch((e) => {
+        if (e.name === 'NotAllowedError') {
+          setIsPlaying(false);
+          return;
+        }
+        console.error('Play error:', e);
+        emitAudioError({
+          message: `Play failed: ${e?.message || e?.name || 'unknown'}`,
+          title: item.label || item.name,
+          url: item.url,
+        });
+      });
+    };
+
+    if (audio.readyState >= 2) {
+      attemptPlay();
+    } else {
+      const onReady = () => {
+        audio.removeEventListener('canplay', onReady);
+        audio.removeEventListener('error', onErr);
+        attemptPlay();
+      };
+      const onErr = () => {
+        audio.removeEventListener('canplay', onReady);
+        audio.removeEventListener('error', onErr);
+        const code = audio.error?.code;
+        console.error('Audio load error', { code, url: item.url });
+        emitAudioError({
+          message: `Couldn't load audio (${mediaErrorText(code)})`,
+          title: item.label || item.name,
+          url: item.url,
+          code,
         });
       };
+      audio.addEventListener('canplay', onReady);
+      audio.addEventListener('error', onErr);
+    }
 
-      if (audio.readyState >= 2) {
-        attemptPlay();
-      } else {
-        const onReady = () => {
-          audio.removeEventListener('canplay', onReady);
-          audio.removeEventListener('error', onErr);
-          attemptPlay();
-        };
-        const onErr = () => {
-          audio.removeEventListener('canplay', onReady);
-          audio.removeEventListener('error', onErr);
-          const code = audio.error?.code;
-          console.error('Audio load error', { code, url: item.url });
-          emitAudioError({
-            message: `Couldn't load audio (${mediaErrorText(code)})`,
-            title: item.label || item.name,
-            url: item.url,
-            code,
-          });
-        };
-        audio.addEventListener('canplay', onReady);
-        audio.addEventListener('error', onErr);
-      }
+    setIsPlaying(true);
+    setActiveBtnId(item.btnId ?? null);
+    setCurrentTrackName(item.label || item.name || null);
+    requestWakeLock();
 
-      setIsPlaying(true);
-      setActiveBtnId(item.btnId ?? null);
-      requestWakeLock();
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: item.label || item.name || 'Walk-Up Song',
+        artist: 'Baseball SoundBoard',
+      });
+    }
+  }
 
-      if ('mediaSession' in navigator) {
-        navigator.mediaSession.metadata = new MediaMetadata({
-          title: item.label || item.name || 'Walk-Up Song',
-          artist: 'Baseball SoundBoard',
-        });
-      }
-    },
-    []
-  );
+  function playQueueItem(queue: QueueItem[], idx: number) {
+    if (idx < 0 || idx >= queue.length) {
+      setIsPlaying(false);
+      setCurrentTrackName(null);
+      return;
+    }
+    playTrack(queue[idx]);
+  }
+
+  function resumeQueue() {
+    const queue = queueRef.current;
+    const idx = indexRef.current;
+    if (idx < 0 || idx >= queue.length) {
+      setIsPlaying(false);
+      setActiveBtnId(null);
+      setCurrentTrackName(null);
+      releaseWakeLock();
+      return;
+    }
+    // Resume from saved position or start of current track
+    playTrack(queue[idx]);
+  }
 
   // Handle ended event
   useEffect(() => {
@@ -281,12 +308,31 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     if (!audio) return;
 
     const onEnded = () => {
+      // If a priority track just finished, resume the queue
+      if (priorityRef.current) {
+        priorityRef.current = false;
+        setIsPriorityPlaying(false);
+        setActiveBtnId(null);
+
+        const queue = queueRef.current;
+        const idx = indexRef.current;
+        if (queue.length > 0 && idx >= 0 && idx < queue.length) {
+          resumeQueue();
+        } else {
+          setIsPlaying(false);
+          setCurrentTrackName(null);
+          releaseWakeLock();
+        }
+        return;
+      }
+
+      // Normal queue ended behavior
       if (repeatRef.current === 'one') {
         audio.currentTime = 0;
         audio.play().then(() => fadeIn()).catch(() => {});
         return;
       }
-      // Advance
+
       const queue = queueRef.current;
       const nextIdx = indexRef.current + 1;
       if (nextIdx >= queue.length) {
@@ -294,15 +340,11 @@ export function AudioProvider({ children }: { children: ReactNode }) {
           const newQueue = shuffleRef.current ? shuffleRemaining(queue, 0) : queue;
           setPlayQueue(newQueue);
           setQueueIndex(0);
-          playCurrentInQueueInternal(newQueue, 0);
-        } else if (shuffleRef.current && queue.length > 1) {
-          const newQueue = shuffleRemaining(queue, 0);
-          setPlayQueue(newQueue);
-          setQueueIndex(0);
-          playCurrentInQueueInternal(newQueue, 0);
+          playQueueItem(newQueue, 0);
         } else {
           setActiveBtnId(null);
           setIsPlaying(false);
+          setCurrentTrackName(null);
           releaseWakeLock();
         }
         return;
@@ -313,12 +355,12 @@ export function AudioProvider({ children }: { children: ReactNode }) {
         setPlayQueue(newQueue);
       }
       setQueueIndex(nextIdx);
-      playCurrentInQueueInternal(newQueue, nextIdx);
+      playQueueItem(newQueue, nextIdx);
     };
 
     audio.addEventListener('ended', onEnded);
     return () => audio.removeEventListener('ended', onEnded);
-  }, [playCurrentInQueueInternal]);
+  }, []);
 
   // Visibility change handler
   useEffect(() => {
@@ -340,61 +382,104 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     return () => document.removeEventListener('visibilitychange', handler);
   }, []);
 
-  const playFromQueue = useCallback(
-    (queue: QueueItem[]) => {
-      const audio = queueAudioRef.current;
-      if (!audio) return;
+  // --- Public actions ---
 
-      const upcoming =
-        indexRef.current >= 0 && indexRef.current < queueRef.current.length
-          ? queueRef.current.slice(indexRef.current + 1)
-          : [];
-      const newQueue = [...queue, ...upcoming];
+  const priorityPlay = useCallback((item: QueueItem) => {
+    const audio = queueAudioRef.current;
+    if (!audio) return;
 
-      const doPlay = () => {
-        setActiveBtnId(null);
-        setPlayQueue(newQueue);
-        setQueueIndex(0);
-        setIsPlaying(false);
-        playCurrentInQueueInternal(newQueue, 0);
-      };
+    // If already playing a priority track for the same button, stop it
+    if (priorityRef.current && item.btnId && item.btnId === activeBtnId) {
+      // Stop priority, resume queue
+      priorityRef.current = false;
+      setIsPriorityPlaying(false);
+      clearFades();
 
-      if (playingRef.current && !audio.paused) {
-        fadeOut(doPlay);
-      } else {
-        audio.pause();
-        audio.currentTime = 0;
-        doPlay();
-      }
-    },
-    [playCurrentInQueueInternal]
-  );
-
-  const addToQueue = useCallback(
-    (item: QueueItem) => {
       const queue = queueRef.current;
-      if (queue.length === 0 || indexRef.current < 0) {
-        playFromQueue([item]);
-        return;
+      const idx = indexRef.current;
+      if (queue.length > 0 && idx >= 0 && idx < queue.length) {
+        fadeOut(() => resumeQueue());
+      } else {
+        fadeOut(() => {
+          setIsPlaying(false);
+          setActiveBtnId(null);
+          setCurrentTrackName(null);
+          releaseWakeLock();
+        });
       }
-      if (!playingRef.current && indexRef.current >= queue.length - 1) {
-        const newQueue = [...queue, item];
-        const newIdx = newQueue.length - 1;
-        setPlayQueue(newQueue);
-        setQueueIndex(newIdx);
-        playCurrentInQueueInternal(newQueue, newIdx);
-        return;
-      }
-      setPlayQueue([...queue, item]);
-    },
-    [playFromQueue, playCurrentInQueueInternal]
-  );
+      return;
+    }
+
+    // Save queue state if currently playing from queue (not priority)
+    if (playingRef.current && !priorityRef.current && indexRef.current >= 0) {
+      savedQueuePosRef.current = {
+        wasPlaying: true,
+        time: audio.currentTime,
+      };
+    }
+
+    priorityRef.current = true;
+    setIsPriorityPlaying(true);
+
+    const doPlay = () => playTrack(item);
+
+    if (playingRef.current && !audio.paused) {
+      fadeOut(doPlay);
+    } else {
+      audio.pause();
+      audio.currentTime = 0;
+      doPlay();
+    }
+  }, [activeBtnId]);
+
+  const addToQueue = useCallback((item: QueueItem) => {
+    const queue = queueRef.current;
+
+    if (queue.length === 0 && !priorityRef.current) {
+      // Nothing playing at all — start playing this item
+      setPlayQueue([item]);
+      setQueueIndex(0);
+      playQueueItem([item], 0);
+      return;
+    }
+
+    // Just append to queue
+    setPlayQueue([...queue, item]);
+
+    // If queue was empty/finished and nothing is playing from queue, start it
+    if (!priorityRef.current && (!playingRef.current || indexRef.current >= queue.length)) {
+      const newQueue = [...queue, item];
+      const newIdx = newQueue.length - 1;
+      setPlayQueue(newQueue);
+      setQueueIndex(newIdx);
+      playQueueItem(newQueue, newIdx);
+    }
+  }, []);
 
   const togglePlayPause = useCallback(() => {
     const audio = queueAudioRef.current;
+    if (!audio) return;
+
+    // If priority playing, pause/resume the priority track
+    if (priorityRef.current) {
+      if (playingRef.current) {
+        fadeOut(() => {
+          setIsPlaying(false);
+          releaseWakeLock();
+        }, false);
+        setIsPlaying(false);
+      } else {
+        fadeIn();
+        audio.play().catch(() => {});
+        setIsPlaying(true);
+        requestWakeLock();
+      }
+      return;
+    }
+
     const queue = queueRef.current;
     const idx = indexRef.current;
-    if (!audio || queue.length === 0 || idx < 0 || idx >= queue.length) return;
+    if (queue.length === 0 || idx < 0 || idx >= queue.length) return;
 
     if (playingRef.current) {
       setActiveBtnId(null);
@@ -414,12 +499,31 @@ export function AudioProvider({ children }: { children: ReactNode }) {
 
   const skipNext = useCallback(() => {
     const audio = queueAudioRef.current;
-    const queue = queueRef.current;
-    if (!audio || queue.length === 0) return;
+    if (!audio) return;
     clearFades();
     audio.pause();
     audio.currentTime = 0;
     setVol(1);
+
+    // If priority playing, skip = end priority, resume queue
+    if (priorityRef.current) {
+      priorityRef.current = false;
+      setIsPriorityPlaying(false);
+      setActiveBtnId(null);
+      const queue = queueRef.current;
+      const idx = indexRef.current;
+      if (queue.length > 0 && idx >= 0 && idx < queue.length) {
+        resumeQueue();
+      } else {
+        setIsPlaying(false);
+        setCurrentTrackName(null);
+        releaseWakeLock();
+      }
+      return;
+    }
+
+    const queue = queueRef.current;
+    if (queue.length === 0) return;
 
     const nextIdx = indexRef.current + 1;
     if (nextIdx >= queue.length) {
@@ -427,10 +531,11 @@ export function AudioProvider({ children }: { children: ReactNode }) {
         const newQueue = shuffleRef.current ? shuffleRemaining(queue, 0) : queue;
         setPlayQueue(newQueue);
         setQueueIndex(0);
-        playCurrentInQueueInternal(newQueue, 0);
+        playQueueItem(newQueue, 0);
       } else {
         setActiveBtnId(null);
         setIsPlaying(false);
+        setCurrentTrackName(null);
         releaseWakeLock();
       }
       return;
@@ -441,29 +546,42 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       setPlayQueue(newQueue);
     }
     setQueueIndex(nextIdx);
-    playCurrentInQueueInternal(newQueue, nextIdx);
-  }, [playCurrentInQueueInternal]);
+    playQueueItem(newQueue, nextIdx);
+  }, []);
 
   const skipPrev = useCallback(() => {
     const audio = queueAudioRef.current;
-    if (!audio || queueRef.current.length === 0) return;
+    if (!audio) return;
     clearFades();
     audio.pause();
     audio.currentTime = 0;
     setVol(1);
+
+    // If priority playing, just restart the priority track
+    if (priorityRef.current) {
+      audio.play().then(() => fadeIn()).catch(() => {});
+      return;
+    }
+
+    if (queueRef.current.length === 0) return;
     const prevIdx = Math.max(0, indexRef.current - 1);
     setQueueIndex(prevIdx);
-    playCurrentInQueueInternal(queueRef.current, prevIdx);
-  }, [playCurrentInQueueInternal]);
+    playQueueItem(queueRef.current, prevIdx);
+  }, []);
 
   const stopAll = useCallback((clearQ = false) => {
     const audio = queueAudioRef.current;
     if (!audio) return;
     clearFades();
+    priorityRef.current = false;
+    setIsPriorityPlaying(false);
     setActiveBtnId(null);
+    savedQueuePosRef.current = null;
+
     if (playingRef.current && !audio.paused) {
       fadeOut(() => {
         setIsPlaying(false);
+        setCurrentTrackName(null);
         releaseWakeLock();
         if (clearQ) { setPlayQueue([]); setQueueIndex(-1); }
       });
@@ -472,6 +590,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     audio.pause();
     audio.currentTime = 0;
     setIsPlaying(false);
+    setCurrentTrackName(null);
     releaseWakeLock();
     if (clearQ) { setPlayQueue([]); setQueueIndex(-1); }
   }, []);
@@ -482,33 +601,31 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     setRepeatMode((m) => (m === 'off' ? 'all' : m === 'all' ? 'one' : 'off'));
   }, []);
 
-  const removeFromQueue = useCallback(
-    (idx: number) => {
-      const queue = [...queueRef.current];
-      const curIdx = indexRef.current;
-      const audio = queueAudioRef.current;
+  const removeFromQueue = useCallback((idx: number) => {
+    const queue = [...queueRef.current];
+    const curIdx = indexRef.current;
+    const audio = queueAudioRef.current;
 
-      if (idx === curIdx) {
-        audio?.pause();
-        if (audio) audio.currentTime = 0;
-        queue.splice(idx, 1);
-        if (curIdx >= queue.length) {
-          setActiveBtnId(null);
-          setIsPlaying(false);
-          setQueueIndex(-1);
-        } else {
-          setPlayQueue(queue);
-          playCurrentInQueueInternal(queue, curIdx);
-        }
-        setPlayQueue(queue);
+    if (idx === curIdx && !priorityRef.current) {
+      audio?.pause();
+      if (audio) audio.currentTime = 0;
+      queue.splice(idx, 1);
+      if (curIdx >= queue.length) {
+        setActiveBtnId(null);
+        setIsPlaying(false);
+        setCurrentTrackName(null);
+        setQueueIndex(-1);
       } else {
-        queue.splice(idx, 1);
         setPlayQueue(queue);
-        if (idx < curIdx) setQueueIndex(curIdx - 1);
+        playQueueItem(queue, curIdx);
       }
-    },
-    [playCurrentInQueueInternal]
-  );
+      setPlayQueue(queue);
+    } else {
+      queue.splice(idx, 1);
+      setPlayQueue(queue);
+      if (idx < curIdx) setQueueIndex(curIdx - 1);
+    }
+  }, []);
 
   const reorderQueue = useCallback((from: number, to: number) => {
     const queue = [...queueRef.current];
@@ -524,25 +641,31 @@ export function AudioProvider({ children }: { children: ReactNode }) {
 
   const clearQueue = useCallback(() => {
     const audio = queueAudioRef.current;
-    if (audio) { audio.pause(); audio.currentTime = 0; }
-    setActiveBtnId(null);
+    // If currently playing from queue (not priority), stop
+    if (!priorityRef.current) {
+      if (audio) { audio.pause(); audio.currentTime = 0; }
+      setIsPlaying(false);
+      setActiveBtnId(null);
+      setCurrentTrackName(null);
+    }
     setPlayQueue([]);
     setQueueIndex(-1);
-    setIsPlaying(false);
   }, []);
 
   return (
-    <AudioContext.Provider
+    <AudioCtx.Provider
       value={{
         playQueue,
         queueIndex,
         isPlaying,
+        isPriorityPlaying,
         isShuffle,
         repeatMode,
         currentTime,
         duration,
         activeBtnId,
-        playFromQueue,
+        currentTrackName,
+        priorityPlay,
         addToQueue,
         togglePlayPause,
         skipNext,
@@ -556,12 +679,12 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
-    </AudioContext.Provider>
+    </AudioCtx.Provider>
   );
 }
 
 export function useAudio() {
-  const ctx = useContext(AudioContext);
+  const ctx = useContext(AudioCtx);
   if (!ctx) throw new Error('useAudio must be used within AudioProvider');
   return ctx;
 }

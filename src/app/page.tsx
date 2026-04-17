@@ -99,8 +99,7 @@ export default function SoundboardPage() {
   const [mainTab, setMainTab] = useState<'game' | 'library'>('game');
   const [libraryFilter, setLibraryFilter] = useState('');
   const [addSongModalOpen, setAddSongModalOpen] = useState(false);
-  const [extraControlsOpen, setExtraControlsOpen] = useState(false);
-  const [isLight, setIsLight] = useState(false);
+    const [isLight, setIsLight] = useState(false);
 
   // --- Roster form ---
   const [newFirstName, setNewFirstName] = useState('');
@@ -477,7 +476,7 @@ export default function SoundboardPage() {
     if (audio.activeBtnId === btnId) {
       audio.stopAll();
     } else {
-      audio.playFromQueue([{ url: sound.url, name: sound.label || sound.fileName, label: sound.label || sound.fileName, btnId }]);
+      audio.priorityPlay({ url: sound.url, name: sound.label || sound.fileName, label: sound.label || sound.fileName, btnId });
     }
   }
 
@@ -489,24 +488,37 @@ export default function SoundboardPage() {
     const url = player[`${type}Url`];
     if (!url) return;
     const labels: Record<string, string> = { intro: 'Intro', song: 'Walk-up Song', combo: 'Full Intro + Song' };
-    audio.playFromQueue([{ url, name: `${player.name} — ${labels[type]}`, label: `${player.name} — ${labels[type]}`, btnId }]);
+    audio.priorityPlay({ url, name: `${player.name} — ${labels[type]}`, label: `${player.name} — ${labels[type]}`, btnId });
   }
 
   function playLibrarySong(song: LibrarySong) {
-    audio.playFromQueue([{ url: song.url, name: song.title }]);
+    // Priority play — interrupts queue, resumes after
+    audio.priorityPlay({ url: song.url, name: song.title, label: song.title });
   }
 
-  function playAllLibrary() {
+  function addAllToQueue() {
     if (librarySongs.length === 0) return;
-    const queue: QueueItem[] = librarySongs.map((s) => ({ url: s.url, name: s.title }));
+    let songs = [...librarySongs];
     if (audio.isShuffle) {
-      for (let i = queue.length - 1; i > 0; i--) {
+      for (let i = songs.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [queue[i], queue[j]] = [queue[j], queue[i]];
+        [songs[i], songs[j]] = [songs[j], songs[i]];
       }
     }
-    audio.playFromQueue(queue);
+    songs.forEach((s) => audio.addToQueue({ url: s.url, name: s.title }));
   }
+
+  // --- Queue panel state ---
+  const [queuePanelOpen, setQueuePanelOpen] = useState(false);
+
+  // Currently playing song URL (for highlighting in library)
+  const currentPlayingUrl = audio.isPlaying ? (
+    audio.queueIndex >= 0 && audio.queueIndex < audio.playQueue.length
+      ? audio.playQueue[audio.queueIndex].url
+      : null
+  ) : null;
+  // Also check priority play
+  const activeSongUrl = audio.isPlaying ? (audio.currentTrackName ? undefined : null) : null;
 
   // --- Batter display ---
   const activePlayers = players.filter((p) => p.active);
@@ -804,77 +816,56 @@ export default function SoundboardPage() {
                   <i className="iconoir-search" style={{ fontSize: 16, color: 'var(--text-dim)' }} />
                   <input type="text" placeholder="Search songs..." value={libraryFilter} onChange={(e) => setLibraryFilter(e.target.value)} />
                 </div>
-                <button className="small-btn primary play-all-btn" onClick={playAllLibrary}>
-                  <i className="iconoir-play" style={{ fontSize: 14 }} /><span className="btn-label"> Play All</span>
+                <button className="small-btn primary play-all-btn" onClick={addAllToQueue}>
+                  <i className="iconoir-playlist-plus" style={{ fontSize: 14 }} /><span className="btn-label"> Queue All</span>
                 </button>
                 <button className="small-btn add-song-btn" onClick={() => setAddSongModalOpen(true)}>
                   <i className="iconoir-plus" style={{ fontSize: 14 }} /><span className="btn-label"> Add Song</span>
                 </button>
               </div>
               <div className="library-list">
-                {filteredLibrary.map((song) => (
-                  <div key={song.id} className="library-item">
-                    <div className="song-info">
-                      <div className="song-title">{song.title}</div>
-                      {song.artist && <div className="song-meta">{song.artist}</div>}
+                {filteredLibrary.map((song) => {
+                  const isSongPlaying = audio.isPlaying && audio.currentTrackName === song.title;
+                  return (
+                    <div key={song.id} className={`library-item ${isSongPlaying ? 'playing' : ''}`}>
+                      <div className="song-info">
+                        <div className="song-title">{song.title}</div>
+                        {song.artist && <div className="song-meta">{song.artist}</div>}
+                      </div>
+                      <div className="song-actions">
+                        <button title="Add to Queue" onClick={() => audio.addToQueue({ url: song.url, name: song.title })}>
+                          <i className="iconoir-playlist-plus" style={{ fontSize: 14 }} />
+                        </button>
+                        <button
+                          title={isSongPlaying ? 'Pause' : 'Play'}
+                          onClick={() => {
+                            if (isSongPlaying) {
+                              audio.togglePlayPause();
+                            } else {
+                              playLibrarySong(song);
+                            }
+                          }}
+                        >
+                          <i className={isSongPlaying ? 'iconoir-pause' : 'iconoir-play'} style={{ fontSize: 14 }} />
+                        </button>
+                        <button
+                          title="Delete"
+                          onClick={() => {
+                            if (confirm(`Delete "${song.title}" from the library?`)) {
+                              deleteLibrarySong(song.id);
+                            }
+                          }}
+                        >
+                          <i className="iconoir-trash" style={{ fontSize: 14 }} />
+                        </button>
+                      </div>
                     </div>
-                    <div className="song-actions">
-                      <button title="Add to Queue" onClick={() => audio.addToQueue({ url: song.url, name: song.title })}>
-                        <i className="iconoir-playlist-plus" style={{ fontSize: 14 }} />
-                      </button>
-                      <button title="Play" onClick={() => playLibrarySong(song)}>
-                        <i className="iconoir-play" style={{ fontSize: 14 }} />
-                      </button>
-                      <button
-                        title="Delete"
-                        onClick={() => {
-                          if (confirm(`Delete "${song.title}" from the library?`)) {
-                            deleteLibrarySong(song.id);
-                          }
-                        }}
-                      >
-                        <i className="iconoir-trash" style={{ fontSize: 14 }} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               {filteredLibrary.length === 0 && (
                 <div className="empty-state" style={{ marginTop: 20 }}>
                   No songs in the library yet. Add songs for between innings, warmups, and more.
-                </div>
-              )}
-
-              {/* Queue */}
-              {audio.playQueue.length > 0 && audio.queueIndex >= 0 && (
-                <div className="queue-section">
-                  <div className="section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span>Queue</span>
-                    <button className="small-btn danger" onClick={audio.clearQueue} style={{ fontSize: 'var(--text-xs)' }}>Clear</button>
-                  </div>
-                  <div className="queue-list">
-                    {/* Current */}
-                    {audio.queueIndex >= 0 && audio.queueIndex < audio.playQueue.length && (
-                      <div className="queue-item current">
-                        <span className="queue-drag" style={{ visibility: 'hidden' }}><i className="iconoir-menu" style={{ fontSize: 14 }} /></span>
-                        <span className="queue-pos" style={{ color: 'var(--clay)' }}><i className="iconoir-play" style={{ fontSize: 10 }} /></span>
-                        <span className="queue-name" style={{ color: 'var(--clay)', fontWeight: 600 }}>{audio.playQueue[audio.queueIndex].name || 'Unknown'}</span>
-                      </div>
-                    )}
-                    {audio.playQueue.map((item, i) => {
-                      if (i <= audio.queueIndex) return null;
-                      return (
-                        <div key={i} className="queue-item">
-                          <span className="queue-drag"><i className="iconoir-menu" style={{ fontSize: 14 }} /></span>
-                          <span className="queue-pos">{i - audio.queueIndex}</span>
-                          <span className="queue-name">{item.name || 'Unknown'}</span>
-                          <button className="queue-remove" title="Remove" onClick={() => audio.removeFromQueue(i)}>
-                            <i className="iconoir-xmark" style={{ fontSize: 12 }} />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
                 </div>
               )}
             </div>
@@ -882,19 +873,85 @@ export default function SoundboardPage() {
         </div>
       )}
 
+      {/* Queue Panel Backdrop */}
+      {queuePanelOpen && <div className="queue-panel-backdrop" onClick={() => setQueuePanelOpen(false)} />}
+
+      {/* Queue Panel (slides up from Now Playing bar) */}
+      <div className={`queue-panel ${queuePanelOpen ? 'open' : ''}`}>
+        <div className="queue-panel-header">
+          <span className="queue-panel-title">Queue</span>
+          <div className="queue-panel-actions">
+            <button className={`queue-panel-btn ${audio.isShuffle ? 'active' : ''}`} onClick={audio.toggleShuffle} title="Shuffle">
+              <i className="iconoir-shuffle" style={{ fontSize: 16 }} />
+            </button>
+            <button className={`queue-panel-btn ${audio.repeatMode !== 'off' ? 'active' : ''}`} onClick={audio.cycleRepeat} title="Repeat">
+              <i className={audio.repeatMode === 'one' ? 'iconoir-repeat-once' : 'iconoir-repeat'} style={{ fontSize: 16 }} />
+            </button>
+            {audio.playQueue.length > 0 && (
+              <button className="queue-panel-btn danger" onClick={audio.clearQueue} title="Clear Queue">
+                <i className="iconoir-trash" style={{ fontSize: 14 }} />
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="queue-panel-list">
+          {audio.playQueue.length === 0 && (
+            <div className="queue-panel-empty">Queue is empty. Add songs from the library.</div>
+          )}
+          {/* Currently playing from queue */}
+          {!audio.isPriorityPlaying && audio.queueIndex >= 0 && audio.queueIndex < audio.playQueue.length && (
+            <div className="queue-item current">
+              <span className="queue-pos" style={{ color: 'var(--clay)' }}><i className="iconoir-play" style={{ fontSize: 10 }} /></span>
+              <span className="queue-name" style={{ color: 'var(--clay)', fontWeight: 600 }}>{audio.playQueue[audio.queueIndex].name || 'Unknown'}</span>
+            </div>
+          )}
+          {/* Upcoming items */}
+          {audio.playQueue.map((item, i) => {
+            if (i <= audio.queueIndex) return null;
+            return (
+              <div
+                key={i}
+                className="queue-item"
+                draggable
+                data-idx={i}
+                onDragStart={(e) => {
+                  e.dataTransfer.effectAllowed = 'move';
+                  e.dataTransfer.setData('text/plain', String(i));
+                  e.currentTarget.classList.add('dragging');
+                }}
+                onDragEnd={(e) => e.currentTarget.classList.remove('dragging')}
+                onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.currentTarget.classList.add('drag-over'); }}
+                onDragLeave={(e) => e.currentTarget.classList.remove('drag-over')}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.classList.remove('drag-over');
+                  const from = parseInt(e.dataTransfer.getData('text/plain'));
+                  if (from !== i) audio.reorderQueue(from, i);
+                }}
+              >
+                <span className="queue-drag"><i className="iconoir-menu" style={{ fontSize: 14 }} /></span>
+                <span className="queue-pos">{i - Math.max(0, audio.queueIndex)}</span>
+                <span className="queue-name">{item.name || 'Unknown'}</span>
+                <button className="queue-remove" title="Remove" onClick={() => audio.removeFromQueue(i)}>
+                  <i className="iconoir-xmark" style={{ fontSize: 12 }} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Now Playing */}
       <div className="now-playing">
         <div className="progress-bar" style={{ width: audio.duration ? `${(audio.currentTime / audio.duration) * 100}%` : '0%' }} />
         <div className="np-row">
           <div className="track-info">
             <div className="track-name">
-              {audio.queueIndex >= 0 && audio.queueIndex < audio.playQueue.length
-                ? audio.playQueue[audio.queueIndex].label || audio.playQueue[audio.queueIndex].name
-                : 'Nothing playing'}
+              {audio.currentTrackName || 'Nothing playing'}
             </div>
             <div className="track-meta">
               <span className="track-status">
-                {audio.queueIndex >= 0 && audio.queueIndex < audio.playQueue.length
+                {audio.currentTrackName
                   ? (audio.isPlaying ? 'Playing' : 'Paused')
                   : 'Tap a button to play'}
               </span>
@@ -907,18 +964,17 @@ export default function SoundboardPage() {
               <i className={audio.isPlaying ? 'iconoir-pause' : 'iconoir-play'} style={{ fontSize: audio.isPlaying ? 24 : 20 }} />
             </button>
             <button onClick={audio.skipNext} title="Next"><i className="iconoir-skip-next" style={{ fontSize: 16 }} /></button>
-            <button className={`more-toggle ${extraControlsOpen ? 'open' : ''}`} onClick={() => setExtraControlsOpen((o) => !o)} title="More">
-              <i className="iconoir-nav-arrow-up" style={{ fontSize: 14 }} />
+            <button
+              className={`more-toggle ${queuePanelOpen ? 'open' : ''}`}
+              onClick={() => setQueuePanelOpen((o) => !o)}
+              title="Queue"
+            >
+              <i className={queuePanelOpen ? 'iconoir-nav-arrow-down' : 'iconoir-nav-arrow-up'} style={{ fontSize: 14 }} />
+              {audio.playQueue.length > 0 && (
+                <span className="queue-badge">{audio.playQueue.length - Math.max(0, audio.queueIndex)}</span>
+              )}
             </button>
           </div>
-        </div>
-        <div className={`extra-controls ${extraControlsOpen ? 'visible' : ''}`}>
-          <button className={audio.isShuffle ? 'active' : ''} onClick={audio.toggleShuffle} title="Shuffle">
-            <i className="iconoir-shuffle" style={{ fontSize: 16 }} />
-          </button>
-          <button className={audio.repeatMode !== 'off' ? 'active' : ''} onClick={audio.cycleRepeat} title="Repeat">
-            <i className={audio.repeatMode === 'one' ? 'iconoir-repeat-once' : 'iconoir-repeat'} style={{ fontSize: 16 }} />
-          </button>
         </div>
       </div>
 
