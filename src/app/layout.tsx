@@ -36,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" style={{ background: '#111111' }}>
+    <html lang="en">
       <head>
         <link
           rel="stylesheet"
