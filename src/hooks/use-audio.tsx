@@ -27,6 +27,7 @@ interface AudioContextValue {
   // Actions
   priorityPlay: (item: QueueItem) => void;
   addToQueue: (item: QueueItem) => void;
+  addManyToQueue: (items: QueueItem[]) => void;
   togglePlayPause: () => void;
   skipNext: () => void;
   skipPrev: () => void;
@@ -456,6 +457,26 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const addManyToQueue = useCallback((items: QueueItem[]) => {
+    if (items.length === 0) return;
+    const queue = queueRef.current;
+    const combined = [...queue, ...items];
+
+    if (queue.length === 0 && !priorityRef.current) {
+      setPlayQueue(combined);
+      setQueueIndex(0);
+      playQueueItem(combined, 0);
+      return;
+    }
+
+    setPlayQueue(combined);
+
+    if (!priorityRef.current && (!playingRef.current || indexRef.current >= queue.length)) {
+      setQueueIndex(queue.length);
+      playQueueItem(combined, queue.length);
+    }
+  }, []);
+
   const togglePlayPause = useCallback(() => {
     const audio = queueAudioRef.current;
     if (!audio) return;
@@ -667,6 +688,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
         currentTrackName,
         priorityPlay,
         addToQueue,
+        addManyToQueue,
         togglePlayPause,
         skipNext,
         skipPrev,

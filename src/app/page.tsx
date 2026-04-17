@@ -505,7 +505,7 @@ export default function SoundboardPage() {
         [songs[i], songs[j]] = [songs[j], songs[i]];
       }
     }
-    songs.forEach((s) => audio.addToQueue({ url: s.url, name: s.title }));
+    audio.addManyToQueue(songs.map((s) => ({ url: s.url, name: s.title })));
   }
 
   // --- Queue panel state ---
