@@ -142,12 +142,12 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   }
 
   function getVol() {
-    return gainNodeRef.current ? gainNodeRef.current.gain.value : (queueAudioRef.current?.volume ?? 1);
+    return queueAudioRef.current?.volume ?? 1;
   }
 
   function setVol(v: number) {
     if (gainNodeRef.current) gainNodeRef.current.gain.value = v;
-    else if (queueAudioRef.current) queueAudioRef.current.volume = v;
+    if (queueAudioRef.current) queueAudioRef.current.volume = v;
   }
 
   async function requestWakeLock() {
