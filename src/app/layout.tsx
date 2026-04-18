@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Montserrat } from 'next/font/google';
 import { AudioProvider } from '@/hooks/use-audio';
-import { ServiceWorkerRegistration } from './sw-register';
 import './globals.css';
 
 const montserrat = Montserrat({
@@ -45,7 +44,6 @@ export default function RootLayout({
         />
       </head>
       <body className={montserrat.variable}>
-        <ServiceWorkerRegistration />
         <AudioProvider>{children}</AudioProvider>
       </body>
     </html>
